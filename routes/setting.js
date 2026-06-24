@@ -27,7 +27,10 @@ router.put('/', async (req, res) => {
   try {
     const namaWarung = requireString(req.body?.nama_warung, 'Nama warung');
 
-    await run('UPDATE setting SET value = ? WHERE key = ?', [namaWarung, 'nama_warung']);
+    await run(
+      'INSERT INTO setting (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value',
+      ['nama_warung', namaWarung]
+    );
 
     const rows = await getAll('SELECT key, value FROM setting');
     const settings = {};
