@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Pengaturan — Kasir Mini</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="manifest" href="/manifest.json">
+</head>
+<body>
+  <main class="container">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+      <a href="/" style="text-decoration:none; color:#166534; font-weight:600;">← Beranda</a>
+      <span class="muted small" id="warung"></span>
+    </div>
+
+    <h1 class="title">Pengaturan</h1>
+
+    <section class="card">
+      <h3 style="margin:0 0 12px;">Nama Warung</h3>
+      <form id="formSetting">
+        <input id="namaWarung" type="text" required style="font-size:18px;">
+        <p id="status" class="error mt-2"></p>
+        <button type="submit" class="primary mt-3">Simpan Nama Warung</button>
+      </form>
+    </section>
+
+    <section class="card mt-4">
+      <h3 style="margin:0 0 12px;">Backup</h3>
+      <p class="muted">Unduh salinan database untuk keamanan.</p>
+      <button id="backupBtn" class="primary">Download Backup (.db)</button>
+    </section>
+  </main>
+
+  <script src="/js/app.js"></script>
+  <script src="/js/setting.js"></script>
+  <script>
+    window.KasirApp.renderBottomNav('atur');
+    window.KasirApp.getSetting?.().then(r => {
+      document.getElementById('warung').textContent = r.data.nama_warung || '';
+    }).catch(() => {});
+  </script>
+</body>
+</html>

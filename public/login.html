@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Masuk ke aplikasi Kasir Mini untuk mengelola transaksi dan stok warung Anda.">
+  <meta name="theme-color" content="#0f766e">
+  <title>Masuk — Kasir Mini</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/css/login.css">
+  <link rel="manifest" href="/manifest.json">
+</head>
+<body class="auth-body">
+  <main class="auth-shell" role="main">
+    <section class="auth-hero" aria-hidden="true">
+      <div class="auth-hero__inner">
+        <div class="auth-brand">
+          <span class="auth-brand__mark" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M3 7h18l-1.5 11a2 2 0 0 1-2 1.7H6.5a2 2 0 0 1-2-1.7L3 7Z"/>
+              <path d="M8 7V5a4 4 0 0 1 8 0v2"/>
+              <path d="M9 11h6"/>
+            </svg>
+          </span>
+          <span class="auth-brand__name">Kasir Mini</span>
+        </div>
+
+        <h1 class="auth-hero__title">Selamat datang kembali.</h1>
+        <p class="auth-hero__subtitle">
+          Kelola transaksi, stok, dan laporan penjualan warung Anda dalam satu tempat — cepat, ringan, dan siap pakai offline.
+        </p>
+
+        <ul class="auth-hero__points" role="list">
+          <li><span aria-hidden="true">⚡</span> Transaksi kurang dari 30 detik</li>
+          <li><span aria-hidden="true">📦</span> Stok real-time &amp; peringatan menipis</li>
+          <li><span aria-hidden="true">🧾</span> Cetak struk 58mm / 80mm</li>
+        </ul>
+      </div>
+      <div class="auth-hero__glow" aria-hidden="true"></div>
+    </section>
+
+    <section class="auth-panel" aria-labelledby="loginTitle">
+      <div class="auth-panel__inner">
+        <header class="auth-panel__head">
+          <p class="auth-eyebrow">Masuk Admin</p>
+          <h2 id="loginTitle" class="auth-title">Login ke Kasir Mini</h2>
+          <p class="auth-subtitle">Gunakan akun admin Anda untuk membuka aplikasi.</p>
+        </header>
+
+        <form id="loginForm" class="auth-form" autocomplete="on" novalidate>
+          <div class="auth-field">
+            <label for="username">Username</label>
+            <div class="auth-input">
+              <span class="auth-input__icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="12" cy="8" r="4"/>
+                  <path d="M4 21a8 8 0 0 1 16 0"/>
+                </svg>
+              </span>
+              <input
+                id="username"
+                name="username"
+                type="text"
+                autocomplete="username"
+                inputmode="text"
+                spellcheck="false"
+                autocapitalize="off"
+                required
+                autofocus
+                placeholder="contoh: admin"
+              >
+            </div>
+          </div>
+
+          <div class="auth-field">
+            <label for="password">Password</label>
+            <div class="auth-input">
+              <span class="auth-input__icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="4" y="11" width="16" height="9" rx="2"/>
+                  <path d="M8 11V8a4 4 0 0 1 8 0v3"/>
+                </svg>
+              </span>
+              <input
+                id="password"
+                name="password"
+                type="password"
+                autocomplete="current-password"
+                required
+                placeholder="Masukkan password"
+              >
+              <button
+                type="button"
+                id="togglePassword"
+                class="auth-input__action"
+                aria-label="Tampilkan password"
+                aria-pressed="false"
+                title="Tampilkan password"
+              >
+                <svg class="icon-eye" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"/>
+                  <circle cx="12" cy="12" r="3"/>
+                </svg>
+                <svg class="icon-eye-off" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M3 3l18 18"/>
+                  <path d="M10.6 6.1A10.7 10.7 0 0 1 12 6c6.5 0 10 6 10 6a16.6 16.6 0 0 1-3.2 4"/>
+                  <path d="M6.6 6.6A16.4 16.4 0 0 0 2 12s3.5 6 10 6a10.6 10.6 0 0 0 4.4-1"/>
+                  <path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/>
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          <p id="errorBox" class="auth-error" role="alert" aria-live="polite"></p>
+
+          <button id="submitButton" class="auth-submit" type="submit" data-loading="false">
+            <span class="auth-submit__label">Masuk</span>
+            <span class="auth-submit__spinner" aria-hidden="true"></span>
+          </button>
+
+          <p class="auth-foot">Tekan <kbd>Enter</kbd> untuk masuk · <kbd>Esc</kbd> untuk mengosongkan.</p>
+        </form>
+      </div>
+    </section>
+  </main>
+
+  <script src="/js/app.js"></script>
+  <script src="/js/login.js"></script>
+</body>
+</html>

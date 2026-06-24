@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Kasbon — Kasir Mini</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="manifest" href="/manifest.json">
+</head>
+<body>
+  <main class="container">
+    <div class="page-header">
+      <a href="/" class="back-link">← Beranda</a>
+      <span class="muted small" id="warung"></span>
+    </div>
+
+    <nav class="nav-links">
+      <a href="/pemasukan.html" class="nav-link">Pemasukan</a>
+      <a href="/pengeluaran.html" class="nav-link">Pengeluaran</a>
+      <a href="/kasbon.html" class="nav-link active">Kasbon</a>
+    </nav>
+
+    <h1 class="title">Kasbon</h1>
+
+    <section class="card">
+      <div class="summary summary-neutral">
+        <div class="summary-icon">📒</div>
+        <div class="summary-content">
+          <div class="summary-label">Total Outstanding</div>
+          <div class="summary-value" id="totalOutstanding">Rp 0</div>
+          <div class="summary-extra" id="count">0 orang</div>
+        </div>
+      </div>
+
+      <div class="filter-bar">
+        <select id="filter" class="filter-date-input" style="border-radius:999px;min-height:36px;width:auto;padding-right:32px;">
+          <option value="belum_lunas">Belum Lunas</option>
+          <option value="lunas">Lunas</option>
+          <option value="semua">Semua</option>
+        </select>
+      </div>
+
+      <div id="list" class="list"></div>
+    </section>
+
+    <section class="card mt-3">
+      <h3 class="section-title">Tambah Kasbon Baru</h3>
+      <form id="formKasbon">
+        <label>Nama Pelanggan</label>
+        <input id="nama" type="text" required placeholder="Nama pelanggan">
+
+        <div class="form-row mt-2">
+          <div>
+            <label>Nominal (Rp)</label>
+            <input id="nominal" type="number" min="1" required placeholder="100000">
+          </div>
+          <div>
+            <label>Keterangan (opsional)</label>
+            <input id="keterangan" type="text" placeholder="Opsional">
+          </div>
+        </div>
+
+        <p class="form-error" id="error"></p>
+
+        <button type="submit" class="primary mt-2" id="btnSubmit">
+          <span class="btn-label">Simpan Kasbon</span>
+          <span class="btn-spinner"></span>
+        </button>
+      </form>
+    </section>
+  </main>
+
+  <script src="/js/app.js"></script>
+  <script src="/js/kasbon.js"></script>
+  <script>
+    window.KasirApp.renderBottomNav('kasbon');
+    window.KasirApp.getSetting?.().then(r => {
+      document.getElementById('warung').textContent = r.data.nama_warung || '';
+    }).catch(() => {});
+  </script>
+</body>
+</html>

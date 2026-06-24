@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Pemasukan — Kasir Mini</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="manifest" href="/manifest.json">
+</head>
+<body>
+  <main class="container">
+    <div class="page-header">
+      <a href="/" class="back-link">← Beranda</a>
+      <span class="muted small" id="warung"></span>
+    </div>
+
+    <nav class="nav-links">
+      <a href="/pemasukan.html" class="nav-link active">Pemasukan</a>
+      <a href="/pengeluaran.html" class="nav-link">Pengeluaran</a>
+      <a href="/kasbon.html" class="nav-link">Kasbon</a>
+    </nav>
+
+    <h1 class="title">Pemasukan</h1>
+
+    <section class="card">
+      <h3 class="section-title">Tambah Pemasukan</h3>
+      <form id="formPemasukan">
+        <div class="form-row">
+          <div>
+            <label>Barang</label>
+            <input id="barang" type="text" required placeholder="Contoh: Beras 5kg">
+          </div>
+          <div style="max-width:90px;">
+            <label>Qty</label>
+            <input id="quantity" type="number" min="1" value="1" required>
+          </div>
+        </div>
+
+        <div class="form-row mt-2">
+          <div>
+            <label>Harga Satuan (Rp)</label>
+            <input id="harga" type="number" min="1" required placeholder="15000">
+          </div>
+          <div>
+            <label>Catatan (opsional)</label>
+            <input id="catatan" type="text" placeholder="Opsional">
+          </div>
+        </div>
+
+        <p class="small muted mt-2" id="previewTotal" style="min-height:18px;"></p>
+        <p class="form-error" id="error"></p>
+
+        <button type="submit" class="primary mt-2" id="btnSubmit">
+          <span class="btn-label">Simpan Pemasukan</span>
+          <span class="btn-spinner"></span>
+        </button>
+      </form>
+    </section>
+
+    <section class="card mt-3">
+      <div class="summary summary-income">
+        <div class="summary-icon">📈</div>
+        <div class="summary-content">
+          <div class="summary-label">Total Pemasukan</div>
+          <div class="summary-value" id="total">Rp 0</div>
+        </div>
+      </div>
+
+      <div class="filter-bar" id="filterBar">
+        <button class="btn-filter active" data-filter="today">Hari Ini</button>
+        <button class="btn-filter" data-filter="yesterday">Kemarin</button>
+        <button class="btn-filter" data-filter="custom">Pilih Tanggal</button>
+      </div>
+      <div id="customDateRange" class="hidden" style="display:flex;gap:8px;margin-bottom:8px;">
+        <input type="date" id="dateDari" class="filter-date-input" style="flex:1;">
+        <input type="date" id="dateSampai" class="filter-date-input" style="flex:1;">
+        <button class="btn-sm primary" id="btnFilterDate" style="width:auto;min-height:36px;">Filter</button>
+      </div>
+
+      <div id="list" class="list"></div>
+    </section>
+  </main>
+
+  <script src="/js/app.js"></script>
+  <script src="/js/pemasukan.js"></script>
+  <script>
+    window.KasirApp.renderBottomNav('pemasukan');
+    window.KasirApp.getSetting?.().then(r => {
+      document.getElementById('warung').textContent = r.data.nama_warung || '';
+    }).catch(() => {});
+  </script>
+</body>
+</html>
