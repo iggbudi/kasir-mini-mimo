@@ -9,7 +9,7 @@ router.get('/', async (_req, res) => {
     const settingRow = await getOne("SELECT value FROM setting WHERE key = 'nama_warung'");
     const namaWarung = settingRow ? settingRow.value : 'Warung Saya';
 
-    const today = new Date().toISOString().split('T')[0];
+    const today = new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Jakarta' });
 
     const pemasukanRow = await getOne(`
       SELECT COALESCE(SUM(total), 0) as total

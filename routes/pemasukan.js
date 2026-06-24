@@ -15,7 +15,9 @@ router.get('/', async (req, res) => {
       sql += ' WHERE date(tanggal) BETWEEN ? AND ?';
       params.push(dari, sampai);
     } else {
-      sql += " WHERE date(tanggal) = date('now', 'localtime')";
+      const today = new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Jakarta' });
+      sql += ' WHERE date(tanggal) = ?';
+      params.push(today);
     }
 
     sql += ' ORDER BY tanggal DESC';
@@ -42,10 +44,11 @@ router.post('/', async (req, res) => {
       return fail(res, 400, 'Catatan maksimal 200 karakter');
     }
 
+    const now = new Date().toLocaleString('sv-SE', { timeZone: 'Asia/Jakarta' }).replace(' ', ' ');
     const info = await run(`
-      INSERT INTO pemasukan (barang, quantity, harga, catatan)
-      VALUES (?, ?, ?, ?)
-    `, [barang, quantity, harga, catatan]);
+      INSERT INTO pemasukan (barang, quantity, harga, catatan, tanggal)
+      VALUES (?, ?, ?, ?, ?)
+    `, [barang, quantity, harga, catatan, now]);
 
     const created = await getOne('SELECT * FROM pemasukan WHERE id = ?', [info.lastInsertRowid]);
     return success(res, created);

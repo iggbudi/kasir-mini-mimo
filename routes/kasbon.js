@@ -39,10 +39,11 @@ router.post('/', async (req, res) => {
       return fail(res, 400, 'Keterangan maksimal 200 karakter');
     }
 
+    const now = new Date().toLocaleString('sv-SE', { timeZone: 'Asia/Jakarta' }).replace(' ', ' ');
     const info = await run(`
-      INSERT INTO kasbon (nama, nominal, sisa, keterangan)
-      VALUES (?, ?, ?, ?)
-    `, [nama, nominal, nominal, keterangan]);
+      INSERT INTO kasbon (nama, nominal, sisa, keterangan, tanggal)
+      VALUES (?, ?, ?, ?, ?)
+    `, [nama, nominal, nominal, keterangan, now]);
 
     const created = await getOne('SELECT * FROM kasbon WHERE id = ?', [info.lastInsertRowid]);
     return success(res, created);
@@ -71,9 +72,11 @@ router.post('/:id/bayar', async (req, res) => {
     const newStatus = updateSisa <= 0 ? 'lunas' : 'belum_lunas';
     const finalSisa = Math.max(0, updateSisa);
 
+    const now = new Date().toLocaleString('sv-SE', { timeZone: 'Asia/Jakarta' }).replace(' ', ' ');
+
     await batch([
       { sql: 'UPDATE kasbon SET sisa = ?, status = ? WHERE id = ?', args: [finalSisa, newStatus, id] },
-      { sql: 'INSERT INTO kasbon_bayar (kasbon_id, bayar) VALUES (?, ?)', args: [id, bayar] }
+      { sql: 'INSERT INTO kasbon_bayar (kasbon_id, bayar, tanggal) VALUES (?, ?, ?)', args: [id, bayar, now] }
     ]);
 
     const updatedKasbon = await getOne('SELECT * FROM kasbon WHERE id = ?', [id]);

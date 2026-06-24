@@ -15,7 +15,9 @@ router.get('/', async (req, res) => {
       dateFilter = 'WHERE date(tanggal) BETWEEN ? AND ?';
       params.push(dari, sampai);
     } else {
-      dateFilter = "WHERE date(tanggal) = date('now', 'localtime')";
+      const today = new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Jakarta' });
+      dateFilter = 'WHERE date(tanggal) = ?';
+      params.push(today);
     }
 
     const pemasukanSql = `
