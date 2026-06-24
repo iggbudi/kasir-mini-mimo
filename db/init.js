@@ -1,3 +1,4 @@
+require('../utils/env');
 const bcrypt = require('bcryptjs');
 const db = require('./connection');
 const { execute, getOne, run } = require('./query');
@@ -96,7 +97,13 @@ async function initDb() {
       console.warn('PERINGATAN: ADMIN_PASSWORD tidak diset. Password default: admin123. Ganti untuk production.');
     }
   } else {
-    console.log(`Admin user sudah ada: ${username}`);
+    if (process.env.ADMIN_PASSWORD) {
+      const passwordHash = bcrypt.hashSync(password, 12);
+      await run('UPDATE admin_user SET password_hash = ? WHERE username = ?', [passwordHash, username]);
+      console.log(`Password admin diperbarui dari ADMIN_PASSWORD: ${username}`);
+    } else {
+      console.log(`Admin user sudah ada: ${username}`);
+    }
   }
 
   console.log('Database siap');

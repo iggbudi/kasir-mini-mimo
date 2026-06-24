@@ -114,3 +114,22 @@ test('logout menghapus session server-side', async () => {
   const me = await json('/api/auth/me', { headers: { cookie } });
   assert.equal(me.res.status, 401);
 });
+
+test('GET /logout clear cookie dan redirect ke login', async () => {
+  const login = await json('/api/auth/login', {
+    method: 'POST',
+    body: JSON.stringify({ username: 'admin', password: 'admin123' })
+  });
+  const cookie = login.res.headers.get('set-cookie');
+
+  const res = await fetch(`${baseUrl}/logout`, {
+    headers: { cookie },
+    redirect: 'manual'
+  });
+  assert.equal(res.status, 302);
+  assert.equal(res.headers.get('location'), '/login.html?logged_out=1');
+  assert.match(res.headers.get('set-cookie').toLowerCase(), /sid=;/);
+
+  const me = await json('/api/auth/me', { headers: { cookie } });
+  assert.equal(me.res.status, 401);
+});

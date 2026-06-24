@@ -67,11 +67,11 @@ npm i -g vercel
 # Deploy
 vercel
 
-# Set environment variables
+# Set environment variables SEBELUM deploy production
 vercel env add TURSO_DATABASE_URL
 vercel env add TURSO_AUTH_TOKEN
 vercel env add NODE_ENV production
-vercel env add ADMIN_PASSWORD your-secure-password
+vercel env add ADMIN_PASSWORD
 
 # Deploy ke production
 vercel --prod
@@ -82,7 +82,7 @@ Setelah deploy pertama kali, jalankan init via Vercel:
 ```bash
 # Atau buka endpoint init manual (jika ditambahkan)
 ```
-Database akan ter-inisialisasi otomatis saat build pertama via `vercel-build` script.
+Database akan ter-inisialisasi otomatis saat build via `vercel-build` script. Jika `ADMIN_PASSWORD` diubah, deploy ulang agar hash password admin ikut diperbarui.
 
 ## Environment Variables
 
@@ -101,7 +101,7 @@ Database akan ter-inisialisasi otomatis saat build pertama via `vercel-build` sc
 - `npm run dev`: Jalankan dengan auto-reload
 - `npm run db:init`: Init/reset database
 - `npm test`: Jalankan semua test API (40 tests)
-- `npm run vercel-build`: Init database saat build Vercel
+- `npm run vercel-build`: Init database saat build Vercel. Build akan gagal jika production tidak memakai Turso remote.
 
 ## Struktur
 ```

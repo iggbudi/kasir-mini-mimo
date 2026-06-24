@@ -35,6 +35,19 @@ app.get('/api/health', async (_req, res) => {
 });
 
 app.use('/api/auth', authRoutes);
+
+app.get('/logout', async (req, res) => {
+  try {
+    const { SESSION_COOKIE, destroySession, clearSessionCookie } = require('./middleware/auth');
+    await destroySession(req.cookies?.[SESSION_COOKIE]);
+    clearSessionCookie(res);
+  } catch (err) {
+    console.error(err);
+  }
+  res.setHeader('Cache-Control', 'no-store');
+  return res.redirect('/login.html?logged_out=1');
+});
+
 app.use('/api/setting', requireAuth, settingRoutes);
 app.use('/api/pemasukan', requireAuth, pemasukanRoutes);
 app.use('/api/pengeluaran', requireAuth, pengeluaranRoutes);

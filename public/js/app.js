@@ -34,8 +34,9 @@ async function apiFetch(url, options = {}) {
 }
 
 async function logout() {
-  try { await apiFetch('/api/auth/logout', { method: 'POST' }); }
-  finally { location.href = '/login.html'; }
+  // Pakai top-level navigation agar Set-Cookie clear dari server konsisten di mobile/PWA/Vercel.
+  // Fetch logout bisa gagal/ter-cache/terinterupsi lalu login page menganggap session masih aktif.
+  location.replace('/logout');
 }
 
 async function checkAuth() {
