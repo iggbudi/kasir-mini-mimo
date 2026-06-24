@@ -1,4 +1,4 @@
-const CACHE_NAME = 'kasir-mini-v1';
+const CACHE_NAME = 'kasir-mini-v2';
 const ASSETS = [
   '/',
   '/index.html',
@@ -42,7 +42,12 @@ self.addEventListener('activate', (event) => {
 
 self.addEventListener('fetch', (event) => {
   const { request } = event;
-  // Cache-first for GET requests to our assets
+  const url = new URL(request.url);
+
+  if (url.pathname.startsWith('/api/')) {
+    return;
+  }
+
   if (request.method === 'GET') {
     event.respondWith(
       caches.match(request).then((cachedResponse) => {
@@ -50,7 +55,6 @@ self.addEventListener('fetch', (event) => {
           return cachedResponse;
         }
         return fetch(request).then((networkResponse) => {
-          // Optionally cache new responses
           if (networkResponse && networkResponse.status === 200) {
             const responseToCache = networkResponse.clone();
             caches.open(CACHE_NAME).then((cache) => {
@@ -59,7 +63,6 @@ self.addEventListener('fetch', (event) => {
           }
           return networkResponse;
         }).catch(() => {
-          // Fallback for offline
           if (request.destination === 'document') {
             return caches.match('/index.html');
           }
