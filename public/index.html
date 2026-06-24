@@ -9,11 +9,16 @@
 </head>
 <body>
   <main class="container">
-    <div class="page-header">
-      <div>
-        <p class="muted small" id="warung">Memuat...</p>
-        <h1 class="title" style="margin-bottom:4px;" id="greeting">Halo</h1>
-        <p class="muted small" id="welcome"></p>
+    <div class="home-header">
+      <div class="home-header__top">
+        <div>
+          <h1 class="home-header__warung" id="warung">Memuat...</h1>
+          <p class="home-header__admin" id="welcome"></p>
+        </div>
+        <div class="home-header__datetime">
+          <div class="home-header__date" id="currentDate"></div>
+          <div class="home-header__time" id="currentTime"></div>
+        </div>
       </div>
     </div>
 
@@ -71,8 +76,6 @@
 
       try {
         const auth = await KasirApp.checkAuth();
-        const greeting = KasirApp.getGreeting();
-        document.getElementById('greeting').textContent = greeting;
         document.getElementById('welcome').textContent = auth.data.username;
       } catch (_e) {}
 
@@ -80,6 +83,22 @@
         const setting = await KasirApp.getSetting();
         document.getElementById('warung').textContent = setting.data.nama_warung || 'Warung Saya';
       } catch (_e) {}
+
+      function updateDateTime() {
+        const now = new Date();
+        const dateStr = now.toLocaleDateString('id-ID', {
+          weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
+          timeZone: 'Asia/Jakarta'
+        });
+        const timeStr = now.toLocaleTimeString('id-ID', {
+          hour: '2-digit', minute: '2-digit', second: '2-digit',
+          timeZone: 'Asia/Jakarta'
+        });
+        document.getElementById('currentDate').textContent = dateStr;
+        document.getElementById('currentTime').textContent = timeStr;
+      }
+      updateDateTime();
+      setInterval(updateDateTime, 1000);
 
       try {
         const ringkasan = await KasirApp.apiFetch('/api/ringkasan');

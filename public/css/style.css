@@ -62,6 +62,51 @@ body {
   margin-bottom: 12px;
 }
 
+.home-header {
+  margin-bottom: 16px;
+}
+
+.home-header__top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.home-header__warung {
+  font-size: 24px;
+  font-weight: 800;
+  margin: 0 0 4px;
+  color: var(--text);
+  line-height: 1.2;
+}
+
+.home-header__admin {
+  font-size: 14px;
+  color: var(--text-muted);
+  margin: 0;
+  font-weight: 500;
+}
+
+.home-header__datetime {
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.home-header__date {
+  font-size: 12px;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.home-header__time {
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--primary);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+}
+
 .nav-links {
   display: flex;
   gap: 6px;
