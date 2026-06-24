@@ -1,11 +1,11 @@
 const express = require('express');
-const db = require('../db/connection');
+const { getAll, getOne, run } = require('../db/query');
 const { success, fail } = require('../utils/response');
 const { requireString, requirePositiveInteger, optionalString } = require('../utils/validate');
 
 const router = express.Router();
 
-router.get('/', (req, res) => {
+router.get('/', async (req, res) => {
   try {
     const { dari, sampai } = req.query;
     let sql = 'SELECT * FROM pengeluaran';
@@ -20,7 +20,7 @@ router.get('/', (req, res) => {
 
     sql += ' ORDER BY tanggal DESC';
 
-    const items = db.prepare(sql).all(...params);
+    const items = await getAll(sql, params);
     return success(res, items);
   } catch (err) {
     console.error(err);
@@ -28,7 +28,7 @@ router.get('/', (req, res) => {
   }
 });
 
-router.post('/', (req, res) => {
+router.post('/', async (req, res) => {
   try {
     const keterangan = requireString(req.body?.keterangan, 'Keterangan');
     const nominal = requirePositiveInteger(req.body?.nominal, 'Nominal');
@@ -41,12 +41,12 @@ router.post('/', (req, res) => {
       return fail(res, 400, 'Catatan maksimal 200 karakter');
     }
 
-    const info = db.prepare(`
+    const info = await run(`
       INSERT INTO pengeluaran (keterangan, nominal, catatan)
       VALUES (?, ?, ?)
-    `).run(keterangan, nominal, catatan);
+    `, [keterangan, nominal, catatan]);
 
-    const created = db.prepare('SELECT * FROM pengeluaran WHERE id = ?').get(info.lastInsertRowid);
+    const created = await getOne('SELECT * FROM pengeluaran WHERE id = ?', [info.lastInsertRowid]);
     return success(res, created);
   } catch (err) {
     if (err.message.includes('wajib') || err.message.includes('positif') || err.message.includes('karakter')) {
@@ -57,15 +57,15 @@ router.post('/', (req, res) => {
   }
 });
 
-router.delete('/:id', (req, res) => {
+router.delete('/:id', async (req, res) => {
   try {
     const id = parseInt(req.params.id, 10);
     if (!id) return fail(res, 400, 'ID tidak valid');
 
-    const existing = db.prepare('SELECT id FROM pengeluaran WHERE id = ?').get(id);
+    const existing = await getOne('SELECT id FROM pengeluaran WHERE id = ?', [id]);
     if (!existing) return fail(res, 404, 'ID tidak ditemukan');
 
-    db.prepare('DELETE FROM pengeluaran WHERE id = ?').run(id);
+    await run('DELETE FROM pengeluaran WHERE id = ?', [id]);
     return success(res, { deleted: true });
   } catch (err) {
     console.error(err);

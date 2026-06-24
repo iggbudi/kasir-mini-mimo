@@ -1,15 +1,11 @@
 const express = require('express');
-const db = require('../db/connection');
+const { getAll, getOne, run } = require('../db/query');
 const { success, fail } = require('../utils/response');
 const { requireString, requirePositiveInteger, optionalString } = require('../utils/validate');
 
 const router = express.Router();
 
-/**
- * GET /api/pemasukan?dari=&sampai=
- * Default: hari ini
- */
-router.get('/', (req, res) => {
+router.get('/', async (req, res) => {
   try {
     const { dari, sampai } = req.query;
     let sql = 'SELECT * FROM pemasukan';
@@ -24,7 +20,7 @@ router.get('/', (req, res) => {
 
     sql += ' ORDER BY tanggal DESC';
 
-    const items = db.prepare(sql).all(...params);
+    const items = await getAll(sql, params);
     return success(res, items);
   } catch (err) {
     console.error(err);
@@ -32,10 +28,7 @@ router.get('/', (req, res) => {
   }
 });
 
-/**
- * POST /api/pemasukan
- */
-router.post('/', (req, res) => {
+router.post('/', async (req, res) => {
   try {
     const barang = requireString(req.body?.barang, 'Barang');
     const quantity = requirePositiveInteger(req.body?.quantity, 'Quantity');
@@ -49,13 +42,12 @@ router.post('/', (req, res) => {
       return fail(res, 400, 'Catatan maksimal 200 karakter');
     }
 
-    const stmt = db.prepare(`
+    const info = await run(`
       INSERT INTO pemasukan (barang, quantity, harga, catatan)
       VALUES (?, ?, ?, ?)
-    `);
-    const info = stmt.run(barang, quantity, harga, catatan);
+    `, [barang, quantity, harga, catatan]);
 
-    const created = db.prepare('SELECT * FROM pemasukan WHERE id = ?').get(info.lastInsertRowid);
+    const created = await getOne('SELECT * FROM pemasukan WHERE id = ?', [info.lastInsertRowid]);
     return success(res, created);
   } catch (err) {
     if (err.message.includes('wajib') || err.message.includes('positif') || err.message.includes('karakter')) {
@@ -66,18 +58,15 @@ router.post('/', (req, res) => {
   }
 });
 
-/**
- * DELETE /api/pemasukan/:id
- */
-router.delete('/:id', (req, res) => {
+router.delete('/:id', async (req, res) => {
   try {
     const id = parseInt(req.params.id, 10);
     if (!id) return fail(res, 400, 'ID tidak valid');
 
-    const existing = db.prepare('SELECT id FROM pemasukan WHERE id = ?').get(id);
+    const existing = await getOne('SELECT id FROM pemasukan WHERE id = ?', [id]);
     if (!existing) return fail(res, 404, 'ID tidak ditemukan');
 
-    db.prepare('DELETE FROM pemasukan WHERE id = ?').run(id);
+    await run('DELETE FROM pemasukan WHERE id = ?', [id]);
     return success(res, { deleted: true });
   } catch (err) {
     console.error(err);

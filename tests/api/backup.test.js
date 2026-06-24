@@ -5,17 +5,18 @@ const os = require('node:os');
 const path = require('node:path');
 
 const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'kasir-backup-'));
-process.env.DB_PATH = path.join(tmpDir, 'test.db');
+process.env.TURSO_DATABASE_URL = 'file:' + path.join(tmpDir, 'test.db');
 process.env.ADMIN_USERNAME = 'admin';
 process.env.ADMIN_PASSWORD = 'admin123';
 
-require('../../db/init');
+const { initDb } = require('../../db/init');
 const app = require('../../server');
 
 let server;
 let baseUrl;
 
 test.before(async () => {
+  await initDb();
   await new Promise((resolve) => {
     server = app.listen(0, () => {
       baseUrl = `http://127.0.0.1:${server.address().port}`;
@@ -48,12 +49,20 @@ test('GET backup tanpa login ditolak', async () => {
   assert.equal(res.status, 401);
 });
 
-test('GET backup mengembalikan file db', async () => {
+test('GET backup mengembalikan JSON export', async () => {
   const cookie = await login();
   const res = await fetchWithCookie('/api/backup', cookie);
   assert.equal(res.status, 200);
   const contentType = res.headers.get('content-type');
-  assert.ok(contentType.includes('octet') || contentType.includes('application'));
+  assert.ok(contentType.includes('application/json'));
   const disp = res.headers.get('content-disposition');
   assert.ok(disp && disp.includes('kasir-backup'));
+
+  const body = await res.json();
+  assert.ok(body.exported_at);
+  assert.ok(Array.isArray(body.pemasukan));
+  assert.ok(Array.isArray(body.pengeluaran));
+  assert.ok(Array.isArray(body.kasbon));
+  assert.ok(Array.isArray(body.kasbon_bayar));
+  assert.ok(Array.isArray(body.setting));
 });

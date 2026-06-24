@@ -272,6 +272,84 @@ Login ditambahkan sebagai revisi scope MVP:
 
 ---
 
+## Sprint 6 — Turso Database Migration
+
+**Tujuan:** Mengganti SQLite lokal (better-sqlite3) dengan Turso (libSQL) agar database persisten dan cocok untuk serverless.
+
+### Backend
+
+- Daftar & setup Turso database
+- Ganti dependency `better-sqlite3` → `@libsql/client`
+- Refactor `db/connection.js` (async client)
+- Buat helper query `db/query.js` (execute, getOne, getAll)
+- Update `db/init.js` menjadi async migration
+- Update `middleware/auth.js` (semua fungsi session jadi async)
+- Update `server.js` health check
+
+### Testing
+
+- Test koneksi Turso lokal
+- Pastikan init script jalan
+- Test auth flow dengan DB baru
+
+**Gate:** G7 — Turso Migration Ready
+
+---
+
+## Sprint 7 — Async Routes & API
+
+**Tujuan:** Mengubah semua query database menjadi async agar kompatibel dengan Turso client.
+
+### Backend
+
+- Update semua routes:
+  - `routes/auth.js`
+  - `routes/setting.js`
+  - `routes/pemasukan.js`
+  - `routes/pengeluaran.js`
+  - `routes/kasbon.js`
+  - `routes/ringkasan.js`
+  - `routes/riwayat.js`
+  - `routes/backup.js`
+- Update transaksi logic (kasbon bayar) menggunakan `batch()`
+- Update `server.js` route mounting jika perlu
+- Pastikan error handling tetap Bahasa Indonesia
+
+### Testing
+
+- Update semua test di `tests/api/`
+- Test semua endpoint dengan Turso
+- Test transaksi atomic
+
+**Gate:** G8 — Async API Ready
+
+---
+
+## Sprint 8 — Vercel Deployment
+
+**Tujuan:** Deploy aplikasi ke Vercel dengan konfigurasi serverless yang benar.
+
+### Deployment
+
+- Adaptasi `server.js` untuk serverless (export app, conditional listen)
+- Buat `vercel.json`
+- Setup environment variables (TURSO_DATABASE_URL, TURSO_AUTH_TOKEN, dll)
+- Update `package.json` scripts (vercel-build)
+- Adaptasi `/api/backup` (gunakan Turso API atau export)
+- Update README dengan cara deploy & setup Turso
+
+### QA
+
+- Deploy ke Vercel
+- Test E2E flow lengkap di production
+- Test PWA di deployed URL
+- Test offline behavior
+- Verify cold start & DB connection
+
+**Gate:** G9 — Production Deployed
+
+---
+
 ## Urutan Gate
 
 | Gate | Nama | Syarat Lolos |
@@ -282,3 +360,6 @@ Login ditambahkan sebagai revisi scope MVP:
 | G4 | Transaksi Core Ready | Pemasukan, pengeluaran, kasbon jalan |
 | G5 | App Complete | Dashboard, riwayat, setting, backup selesai |
 | G6 | Ship Ready | PWA, QA, README, semua test lolos |
+| G7 | Turso Migration Ready | Database pindah ke Turso, init & auth jalan |
+| G8 | Async API Ready | Semua route pakai async query, test hijau |
+| G9 | Production Deployed | Berhasil deploy ke Vercel + E2E production |

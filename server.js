@@ -3,7 +3,7 @@ const path = require('path');
 const express = require('express');
 const helmet = require('helmet');
 const cookieParser = require('cookie-parser');
-const db = require('./db/connection');
+const { execute } = require('./db/query');
 const authRoutes = require('./routes/auth');
 const settingRoutes = require('./routes/setting');
 const pemasukanRoutes = require('./routes/pemasukan');
@@ -25,9 +25,9 @@ app.use(express.urlencoded({ extended: false, limit: '50kb' }));
 app.use(cookieParser());
 app.use(attachUser);
 
-app.get('/api/health', (_req, res) => {
+app.get('/api/health', async (_req, res) => {
   try {
-    db.prepare('SELECT 1').get();
+    await execute('SELECT 1');
     res.json({ status: 'ok', db: 'connected' });
   } catch (_error) {
     res.status(500).json({ status: 'error', db: 'disconnected' });

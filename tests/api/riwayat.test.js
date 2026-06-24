@@ -5,17 +5,18 @@ const os = require('node:os');
 const path = require('node:path');
 
 const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'kasir-riwayat-'));
-process.env.DB_PATH = path.join(tmpDir, 'test.db');
+process.env.TURSO_DATABASE_URL = 'file:' + path.join(tmpDir, 'test.db');
 process.env.ADMIN_USERNAME = 'admin';
 process.env.ADMIN_PASSWORD = 'admin123';
 
-require('../../db/init');
+const { initDb } = require('../../db/init');
 const app = require('../../server');
 
 let server;
 let baseUrl;
 
 test.before(async () => {
+  await initDb();
   await new Promise((resolve) => {
     server = app.listen(0, () => {
       baseUrl = `http://127.0.0.1:${server.address().port}`;

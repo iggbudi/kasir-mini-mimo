@@ -5,17 +5,18 @@ const os = require('node:os');
 const path = require('node:path');
 
 const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'kasir-kasbon-'));
-process.env.DB_PATH = path.join(tmpDir, 'test.db');
+process.env.TURSO_DATABASE_URL = 'file:' + path.join(tmpDir, 'test.db');
 process.env.ADMIN_USERNAME = 'admin';
 process.env.ADMIN_PASSWORD = 'admin123';
 
-require('../../db/init');
+const { initDb } = require('../../db/init');
 const app = require('../../server');
 
 let server;
 let baseUrl;
 
 test.before(async () => {
+  await initDb();
   await new Promise((resolve) => {
     server = app.listen(0, () => {
       baseUrl = `http://127.0.0.1:${server.address().port}`;
@@ -99,7 +100,5 @@ test('GET kasbon default hanya belum_lunas', async () => {
   const cookie = await login();
   const { res, body } = await json('/api/kasbon', { headers: { cookie } });
   assert.equal(res.status, 200);
-  const hasLunas = body.data.some(k => k.status === 'lunas');
-  // Bisa saja ada, tapi kita cek struktur
   assert.ok(Array.isArray(body.data));
 });

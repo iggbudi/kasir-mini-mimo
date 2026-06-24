@@ -1,14 +1,11 @@
 const express = require('express');
-const db = require('../db/connection');
+const { getAll, getOne, run, batch } = require('../db/query');
 const { success, fail } = require('../utils/response');
 const { requireString, requirePositiveInteger, optionalString } = require('../utils/validate');
 
 const router = express.Router();
 
-/**
- * GET /api/kasbon?status=
- */
-router.get('/', (req, res) => {
+router.get('/', async (req, res) => {
   try {
     const status = req.query.status || 'belum_lunas';
     let sql = 'SELECT * FROM kasbon';
@@ -18,11 +15,10 @@ router.get('/', (req, res) => {
       sql += ' WHERE status = ?';
       params.push(status);
     }
-    // 'semua' => no filter
 
     sql += ' ORDER BY tanggal DESC';
 
-    const items = db.prepare(sql).all(...params);
+    const items = await getAll(sql, params);
     return success(res, items);
   } catch (err) {
     console.error(err);
@@ -30,10 +26,7 @@ router.get('/', (req, res) => {
   }
 });
 
-/**
- * POST /api/kasbon
- */
-router.post('/', (req, res) => {
+router.post('/', async (req, res) => {
   try {
     const nama = requireString(req.body?.nama, 'Nama');
     const nominal = requirePositiveInteger(req.body?.nominal, 'Nominal');
@@ -46,12 +39,12 @@ router.post('/', (req, res) => {
       return fail(res, 400, 'Keterangan maksimal 200 karakter');
     }
 
-    const info = db.prepare(`
+    const info = await run(`
       INSERT INTO kasbon (nama, nominal, sisa, keterangan)
       VALUES (?, ?, ?, ?)
-    `).run(nama, nominal, nominal, keterangan);
+    `, [nama, nominal, nominal, keterangan]);
 
-    const created = db.prepare('SELECT * FROM kasbon WHERE id = ?').get(info.lastInsertRowid);
+    const created = await getOne('SELECT * FROM kasbon WHERE id = ?', [info.lastInsertRowid]);
     return success(res, created);
   } catch (err) {
     if (err.message.includes('wajib') || err.message.includes('positif') || err.message.includes('karakter')) {
@@ -62,17 +55,14 @@ router.post('/', (req, res) => {
   }
 });
 
-/**
- * POST /api/kasbon/:id/bayar
- */
-router.post('/:id/bayar', (req, res) => {
+router.post('/:id/bayar', async (req, res) => {
   try {
     const id = parseInt(req.params.id, 10);
     if (!id) return fail(res, 400, 'ID tidak valid');
 
     const bayar = requirePositiveInteger(req.body?.bayar, 'Bayar');
 
-    const kasbon = db.prepare('SELECT * FROM kasbon WHERE id = ?').get(id);
+    const kasbon = await getOne('SELECT * FROM kasbon WHERE id = ?', [id]);
     if (!kasbon) return fail(res, 404, 'ID tidak ditemukan');
     if (kasbon.status === 'lunas') return fail(res, 400, 'Kasbon sudah lunas');
     if (bayar > kasbon.sisa) return fail(res, 400, 'Jumlah bayar melebihi sisa');
@@ -81,26 +71,15 @@ router.post('/:id/bayar', (req, res) => {
     const newStatus = updateSisa <= 0 ? 'lunas' : 'belum_lunas';
     const finalSisa = Math.max(0, updateSisa);
 
-    const tx = db.transaction(() => {
-      db.prepare(`
-        UPDATE kasbon 
-        SET sisa = ?, status = ? 
-        WHERE id = ?
-      `).run(finalSisa, newStatus, id);
+    await batch([
+      { sql: 'UPDATE kasbon SET sisa = ?, status = ? WHERE id = ?', args: [finalSisa, newStatus, id] },
+      { sql: 'INSERT INTO kasbon_bayar (kasbon_id, bayar) VALUES (?, ?)', args: [id, bayar] }
+    ]);
 
-      const bayarInfo = db.prepare(`
-        INSERT INTO kasbon_bayar (kasbon_id, bayar)
-        VALUES (?, ?)
-      `).run(id, bayar);
+    const updatedKasbon = await getOne('SELECT * FROM kasbon WHERE id = ?', [id]);
+    const pembayaran = await getOne('SELECT * FROM kasbon_bayar WHERE kasbon_id = ? ORDER BY id DESC LIMIT 1', [id]);
 
-      const updatedKasbon = db.prepare('SELECT * FROM kasbon WHERE id = ?').get(id);
-      const pembayaran = db.prepare('SELECT * FROM kasbon_bayar WHERE id = ?').get(bayarInfo.lastInsertRowid);
-
-      return { kasbon: updatedKasbon, pembayaran };
-    });
-
-    const result = tx();
-    return success(res, result);
+    return success(res, { kasbon: updatedKasbon, pembayaran });
   } catch (err) {
     if (err.message.includes('wajib') || err.message.includes('positif')) {
       return fail(res, 400, err.message);
@@ -110,18 +89,15 @@ router.post('/:id/bayar', (req, res) => {
   }
 });
 
-/**
- * DELETE /api/kasbon/:id
- */
-router.delete('/:id', (req, res) => {
+router.delete('/:id', async (req, res) => {
   try {
     const id = parseInt(req.params.id, 10);
     if (!id) return fail(res, 400, 'ID tidak valid');
 
-    const existing = db.prepare('SELECT id FROM kasbon WHERE id = ?').get(id);
+    const existing = await getOne('SELECT id FROM kasbon WHERE id = ?', [id]);
     if (!existing) return fail(res, 404, 'ID tidak ditemukan');
 
-    db.prepare('DELETE FROM kasbon WHERE id = ?').run(id);
+    await run('DELETE FROM kasbon WHERE id = ?', [id]);
     return success(res, { deleted: true });
   } catch (err) {
     console.error(err);

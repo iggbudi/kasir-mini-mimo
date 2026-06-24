@@ -1,17 +1,13 @@
 const express = require('express');
-const db = require('../db/connection');
+const { getAll, run } = require('../db/query');
 const { success, fail } = require('../utils/response');
 const { requireString } = require('../utils/validate');
 
 const router = express.Router();
 
-/**
- * GET /api/setting
- * Mengembalikan setting saat ini (nama_warung & timezone)
- */
-router.get('/', (_req, res) => {
+router.get('/', async (_req, res) => {
   try {
-    const rows = db.prepare('SELECT key, value FROM setting').all();
+    const rows = await getAll('SELECT key, value FROM setting');
     const settings = {};
     for (const row of rows) {
       settings[row.key] = row.value;
@@ -27,18 +23,13 @@ router.get('/', (_req, res) => {
   }
 });
 
-/**
- * PUT /api/setting
- * Body: { nama_warung }
- */
-router.put('/', (req, res) => {
+router.put('/', async (req, res) => {
   try {
     const namaWarung = requireString(req.body?.nama_warung, 'Nama warung');
 
-    db.prepare('UPDATE setting SET value = ? WHERE key = ?').run(namaWarung, 'nama_warung');
+    await run('UPDATE setting SET value = ? WHERE key = ?', [namaWarung, 'nama_warung']);
 
-    // Kembalikan data terbaru
-    const rows = db.prepare('SELECT key, value FROM setting').all();
+    const rows = await getAll('SELECT key, value FROM setting');
     const settings = {};
     for (const row of rows) {
       settings[row.key] = row.value;
