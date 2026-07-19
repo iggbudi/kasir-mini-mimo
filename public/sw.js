@@ -1,4 +1,4 @@
-const CACHE_NAME = 'kasir-mini-v4';
+const CACHE_NAME = 'kasir-mini-v8';
 const ASSETS = [
   '/',
   '/index.html',

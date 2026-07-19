@@ -6,10 +6,11 @@ async function apiFetch(url, options = {}) {
 
   let response;
   try {
+    const { headers = {}, ...fetchOptions } = options;
     response = await fetch(url, {
       credentials: 'same-origin',
-      headers: { 'Content-Type': 'application/json', ...(options.headers || {}) },
-      ...options
+      ...fetchOptions,
+      headers: { 'Content-Type': 'application/json', ...headers }
     });
   } catch (err) {
     if (err instanceof TypeError) {
@@ -27,7 +28,9 @@ async function apiFetch(url, options = {}) {
   }
 
   if (!response.ok || payload?.success === false) {
-    throw new Error(payload?.message || 'Permintaan gagal');
+    const error = new Error(payload?.message || 'Permintaan gagal');
+    error.status = response.status;
+    throw error;
   }
 
   return payload;
@@ -66,6 +69,43 @@ function parseRupiahInput(str) {
   return parseInt(String(str).replace(/[^0-9]/g, ''), 10) || 0;
 }
 
+function escapeHtml(value) {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
+function createRequestId() {
+  if (window.crypto?.randomUUID) return window.crypto.randomUUID();
+  return `req-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+}
+
+const inMemoryRequestIds = new Map();
+
+function getIdempotencyKey(scope, payload) {
+  const storageKey = `kasir:idempotency:${scope}:${JSON.stringify(payload)}`;
+  try {
+    let requestId = sessionStorage.getItem(storageKey);
+    if (!requestId) {
+      requestId = createRequestId();
+      sessionStorage.setItem(storageKey, requestId);
+    }
+    return requestId;
+  } catch (_error) {
+    if (!inMemoryRequestIds.has(storageKey)) inMemoryRequestIds.set(storageKey, createRequestId());
+    return inMemoryRequestIds.get(storageKey);
+  }
+}
+
+function clearIdempotencyKey(scope, payload) {
+  const storageKey = `kasir:idempotency:${scope}:${JSON.stringify(payload)}`;
+  inMemoryRequestIds.delete(storageKey);
+  try { sessionStorage.removeItem(storageKey); } catch (_error) {}
+}
+
 // === Toast ===
 
 function showToast(message, type = 'success') {
@@ -98,8 +138,8 @@ function confirmDialog(title, message) {
     overlay.className = 'modal-overlay';
     overlay.innerHTML = `
       <div class="modal">
-        <h3 class="modal-title">${title}</h3>
-        <p class="modal-message">${message}</p>
+        <h3 class="modal-title">${escapeHtml(title)}</h3>
+        <p class="modal-message">${escapeHtml(message)}</p>
         <div class="modal-actions">
           <button class="secondary" data-action="cancel">Batal</button>
           <button class="primary" data-action="ok">Ya</button>
@@ -118,6 +158,49 @@ function confirmDialog(title, message) {
 
     document.body.appendChild(overlay);
     overlay.querySelector('[data-action="ok"]').focus();
+  });
+}
+
+function promptText(title, message, placeholder = 'Tuliskan alasan', maxLength = 200) {
+  return new Promise((resolve) => {
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+    overlay.innerHTML = `
+      <div class="modal">
+        <h3 class="modal-title">${escapeHtml(title)}</h3>
+        <p class="modal-message">${escapeHtml(message)}</p>
+        <textarea id="promptTextValue" maxlength="${Number(maxLength)}" placeholder="${escapeHtml(placeholder)}" rows="3"></textarea>
+        <p class="form-error" id="promptTextError"></p>
+        <div class="modal-actions mt-3">
+          <button class="secondary" data-action="cancel">Batal</button>
+          <button class="primary" data-action="ok">Lanjutkan</button>
+        </div>
+      </div>
+    `;
+
+    const input = overlay.querySelector('#promptTextValue');
+    const errorEl = overlay.querySelector('#promptTextError');
+
+    function close(result) {
+      overlay.remove();
+      resolve(result);
+    }
+
+    overlay.querySelector('[data-action="ok"]').addEventListener('click', () => {
+      const value = input.value.trim();
+      if (!value) {
+        errorEl.textContent = 'Alasan wajib diisi';
+        return;
+      }
+      close(value);
+    });
+    overlay.querySelector('[data-action="cancel"]').addEventListener('click', () => close(null));
+    overlay.addEventListener('click', (event) => {
+      if (event.target === overlay) close(null);
+    });
+
+    document.body.appendChild(overlay);
+    input.focus();
   });
 }
 
@@ -141,8 +224,8 @@ function promptRupiah(title, message, maxAmount) {
 
     overlay.innerHTML = `
       <div class="modal">
-        <h3 class="modal-title">${title}</h3>
-        <p class="modal-message">${message}</p>
+        <h3 class="modal-title">${escapeHtml(title)}</h3>
+        <p class="modal-message">${escapeHtml(message)}</p>
         <div class="quick-amounts">${quickHTML}</div>
         <label style="margin-top:0;">Nominal Bayar (Rp)</label>
         <input type="number" id="promptAmount" min="1" max="${maxAmount}" placeholder="Masukkan nominal" style="min-height:48px;">
@@ -231,27 +314,42 @@ function showLoading(el) {
 function showEmpty(el, icon, text) {
   el.innerHTML = `
     <div class="empty-state">
-      <div class="empty-state__icon">${icon}</div>
-      <p class="empty-state__text">${text}</p>
+      <div class="empty-state__icon">${escapeHtml(icon)}</div>
+      <p class="empty-state__text">${escapeHtml(text)}</p>
     </div>
   `;
 }
 
 function showError(el, msg) {
-  el.innerHTML = `<p class="error" style="text-align:center;padding:16px;">${msg}</p>`;
+  el.innerHTML = `<p class="error" style="text-align:center;padding:16px;">${escapeHtml(msg)}</p>`;
 }
 
 // === Date Helpers ===
 
+const APP_TIME_ZONE = 'Asia/Jakarta';
+
+function getDateStrInAppTimeZone(date = new Date()) {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: APP_TIME_ZONE,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  }).formatToParts(date);
+  const values = Object.fromEntries(
+    parts.filter(part => part.type !== 'literal').map(part => [part.type, part.value])
+  );
+  return `${values.year}-${values.month}-${values.day}`;
+}
+
 function getTodayStr() {
-  const d = new Date();
-  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  return getDateStrInAppTimeZone();
 }
 
 function getYesterdayStr() {
-  const d = new Date();
-  d.setDate(d.getDate() - 1);
-  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  const today = getTodayStr();
+  const date = new Date(`${today}T00:00:00Z`);
+  date.setUTCDate(date.getUTCDate() - 1);
+  return date.toISOString().slice(0, 10);
 }
 
 function formatDateID(dateStr) {
@@ -262,7 +360,11 @@ function formatDateID(dateStr) {
 // === Greeting Helper ===
 
 function getGreeting() {
-  const h = new Date().getHours();
+  const h = Number(new Intl.DateTimeFormat('en-US', {
+    timeZone: APP_TIME_ZONE,
+    hour: '2-digit',
+    hourCycle: 'h23'
+  }).format(new Date()));
   if (h < 11) return 'Selamat pagi';
   if (h < 15) return 'Selamat siang';
   if (h < 18) return 'Selamat sore';
@@ -313,8 +415,13 @@ window.KasirApp = {
   formatRupiah,
   formatRupiahShort,
   parseRupiahInput,
+  escapeHtml,
+  createRequestId,
+  getIdempotencyKey,
+  clearIdempotencyKey,
   showToast,
   confirmDialog,
+  promptText,
   promptRupiah,
   renderBottomNav,
   showLoading,

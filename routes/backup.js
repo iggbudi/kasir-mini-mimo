@@ -1,31 +1,58 @@
+const crypto = require('crypto');
 const express = require('express');
-const { getAll } = require('../db/query');
-const { success, fail } = require('../utils/response');
+const { batch } = require('../db/query');
+const { fail } = require('../utils/response');
+const { getTodayWib } = require('../utils/date');
 
 const router = express.Router();
 
 router.get('/', async (_req, res) => {
   try {
-    const pemasukan = await getAll('SELECT * FROM pemasukan ORDER BY tanggal DESC');
-    const pengeluaran = await getAll('SELECT * FROM pengeluaran ORDER BY tanggal DESC');
-    const kasbon = await getAll('SELECT * FROM kasbon ORDER BY tanggal DESC');
-    const kasbonBayar = await getAll('SELECT * FROM kasbon_bayar ORDER BY tanggal DESC');
-    const settings = await getAll('SELECT * FROM setting');
+    const results = await batch([
+      'SELECT COALESCE(MAX(version), 0) AS version FROM schema_migration',
+      'SELECT * FROM pemasukan ORDER BY id',
+      'SELECT * FROM pengeluaran ORDER BY id',
+      'SELECT * FROM kasbon ORDER BY id',
+      'SELECT * FROM kasbon_bayar ORDER BY id',
+      'SELECT * FROM setting ORDER BY key'
+    ], 'read');
 
-    const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
-    const filename = `kasir-backup-${dateStr}.json`;
-
-    const backup = {
-      exported_at: new Date().toISOString(),
+    const schemaVersion = Number(results[0].rows[0]?.version || 0);
+    const toPlainRows = result => result.rows.map(row => ({ ...row }));
+    const pemasukan = toPlainRows(results[1]);
+    const pengeluaran = toPlainRows(results[2]);
+    const kasbon = toPlainRows(results[3]);
+    const kasbonBayar = toPlainRows(results[4]);
+    const settings = toPlainRows(results[5]);
+    const data = {
       pemasukan,
       pengeluaran,
       kasbon,
       kasbon_bayar: kasbonBayar,
       setting: settings
     };
+    const checksum = crypto.createHash('sha256').update(JSON.stringify(data)).digest('hex');
 
+    const backup = {
+      format: 'kasir-mini-backup',
+      schema_version: schemaVersion,
+      exported_at: new Date().toISOString(),
+      timezone: 'Asia/Jakarta',
+      counts: {
+        pemasukan: pemasukan.length,
+        pengeluaran: pengeluaran.length,
+        kasbon: kasbon.length,
+        kasbon_bayar: kasbonBayar.length,
+        setting: settings.length
+      },
+      checksum_sha256: checksum,
+      ...data
+    };
+
+    const filename = `kasir-backup-${getTodayWib().replace(/-/g, '')}.json`;
     res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
     res.setHeader('Content-Type', 'application/json');
+    res.setHeader('Cache-Control', 'no-store');
     return res.json(backup);
   } catch (err) {
     console.error(err);

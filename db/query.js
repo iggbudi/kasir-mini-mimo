@@ -22,12 +22,46 @@ async function run(sql, params = []) {
   };
 }
 
-async function batch(statements) {
+async function batch(statements, mode = 'write') {
   const mapped = statements.map(s => {
     if (typeof s === 'string') return { sql: s, args: [] };
     return { sql: s.sql, args: s.args || [] };
   });
-  return db.batch(mapped, 'write');
+  return db.batch(mapped, mode);
 }
 
-module.exports = { execute, getOne, getAll, run, batch };
+async function withTransaction(mode, callback) {
+  const transaction = await db.transaction(mode);
+  let completed = false;
+
+  try {
+    const result = await callback(transaction);
+    await transaction.commit();
+    completed = true;
+    return result;
+  } catch (err) {
+    if (!completed) {
+      try {
+        await transaction.rollback();
+      } catch (rollbackErr) {
+        console.error('Gagal rollback transaksi:', rollbackErr);
+      }
+    }
+    throw err;
+  } finally {
+    transaction.close();
+  }
+}
+
+function withWriteTransaction(callback) {
+  return withTransaction('write', callback);
+}
+
+module.exports = {
+  execute,
+  getOne,
+  getAll,
+  run,
+  batch,
+  withWriteTransaction
+};

@@ -217,6 +217,14 @@ body {
 
 .dashboard-hero__mini-summary strong { color: #fff; }
 
+.dashboard-hero__cash-breakdown {
+  display: block;
+  margin-top: 4px;
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 12px;
+  font-weight: 600;
+}
+
 .dashboard-hero__footer {
   position: relative;
   z-index: 1;
@@ -323,6 +331,15 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
+.riwayat-amount--masuk { color: var(--success); }
+.riwayat-amount--keluar { color: var(--danger); }
+.riwayat-amount--non_kas { color: var(--warning); }
+.riwayat-amount--voided {
+  color: var(--text-muted);
+  text-decoration: line-through;
+}
+.riwayat-item--voided { opacity: 0.78; }
+
 .muted { color: var(--text-muted); }
 .error { color: var(--danger); font-weight: 700; min-height: 24px; }
 .hidden { display: none !important; }
@@ -340,7 +357,7 @@ label {
 
 label:first-child { margin-top: 0; }
 
-input, select {
+input, select, textarea {
   width: 100%;
   min-height: 52px;
   border: 1.5px solid var(--border);
@@ -353,17 +370,23 @@ input, select {
   transition: border-color var(--transition), box-shadow var(--transition);
 }
 
-input:hover, select:hover {
+input:hover, select:hover, textarea:hover {
   border-color: var(--border-strong);
 }
 
-input:focus, select:focus {
+input:focus, select:focus, textarea:focus {
   outline: none;
   border-color: var(--primary);
   box-shadow: 0 0 0 4px var(--primary-focus);
 }
 
-input::placeholder { color: var(--text-light); }
+input::placeholder, textarea::placeholder { color: var(--text-light); }
+
+textarea {
+  min-height: 88px;
+  padding: 12px 14px;
+  resize: vertical;
+}
 
 select {
   cursor: pointer;

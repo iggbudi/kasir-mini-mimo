@@ -44,13 +44,13 @@
         listEl.innerHTML = items.map((item, i) => `
           <div class="list-item" data-type="income" style="animation-delay:${i * 30}ms">
             <div class="item-top">
-              <div class="main">${item.barang} × ${item.quantity}</div>
+              <div class="main">${KasirApp.escapeHtml(item.barang)} × ${item.quantity}</div>
               <div class="amount">${KasirApp.formatRupiah(item.total)}</div>
             </div>
             <div class="meta">@${KasirApp.formatRupiah(item.harga)}</div>
-            ${item.catatan ? `<div class="meta small">${item.catatan}</div>` : ''}
+            ${item.catatan ? `<div class="meta small">${KasirApp.escapeHtml(item.catatan)}</div>` : ''}
             <div class="actions">
-              <button class="secondary btn-sm" data-id="${item.id}">Hapus</button>
+              <button class="secondary btn-sm" data-id="${item.id}">Batalkan</button>
             </div>
           </div>
         `).join('');
@@ -62,14 +62,23 @@
       listEl.querySelectorAll('button[data-id]').forEach(btn => {
         btn.addEventListener('click', async () => {
           const id = btn.dataset.id;
-          const ok = await KasirApp.confirmDialog('Hapus Pemasukan', 'Yakin ingin menghapus pemasukan ini?');
-          if (!ok) return;
+          const reason = await KasirApp.promptText(
+            'Batalkan Pemasukan',
+            'Data tetap disimpan di riwayat audit dan tidak lagi dihitung dalam kas.'
+          );
+          if (!reason) return;
+
+          btn.disabled = true;
           try {
-            await KasirApp.apiFetch(`/api/pemasukan/${id}`, { method: 'DELETE' });
-            KasirApp.showToast('Pemasukan dihapus');
+            await KasirApp.apiFetch(`/api/pemasukan/${id}`, {
+              method: 'DELETE',
+              body: JSON.stringify({ reason })
+            });
+            KasirApp.showToast('Pemasukan dibatalkan');
             loadData();
           } catch (e) {
-            KasirApp.showToast(e.message || 'Gagal hapus', 'error');
+            btn.disabled = false;
+            KasirApp.showToast(e.message || 'Gagal membatalkan', 'error');
           }
         });
       });
@@ -139,12 +148,16 @@
 
     btnSubmit.disabled = true;
     btnSubmit.setAttribute('data-loading', 'true');
+    const requestScope = 'pemasukan:create';
+    const requestId = KasirApp.getIdempotencyKey(requestScope, data);
 
     try {
       await KasirApp.apiFetch('/api/pemasukan', {
         method: 'POST',
+        headers: { 'Idempotency-Key': requestId },
         body: JSON.stringify(data)
       });
+      KasirApp.clearIdempotencyKey(requestScope, data);
       KasirApp.showToast('Pemasukan berhasil disimpan');
       form.reset();
       previewEl.textContent = '';

@@ -4,9 +4,9 @@ Aplikasi kasir sederhana berbasis web untuk warung sembako kecil. Mendukung penc
 
 ## Fitur Utama
 - Login admin sederhana
-- Pemasukan (penjualan): tambah, lihat daftar, hapus, filter tanggal
-- Pengeluaran: tambah, lihat, hapus, filter tanggal
-- Kasbon: tambah, bayar bertahap, lihat status + progress bar
+- Pemasukan (penjualan): tambah, lihat daftar, batalkan dengan jejak audit, filter tanggal
+- Pengeluaran: tambah, lihat, batalkan dengan jejak audit, filter tanggal
+- Kasbon: tambah, bayar bertahap, batalkan dengan jejak audit, lihat status + progress bar
 - Dashboard ringkasan hari ini (quick stats)
 - Riwayat semua transaksi dengan filter tanggal
 - Pengaturan: ubah nama warung + export backup JSON
@@ -99,7 +99,8 @@ Database akan ter-inisialisasi otomatis saat build via `vercel-build` script. Ji
 ## Scripts
 - `npm start`: Jalankan server
 - `npm run dev`: Jalankan dengan auto-reload
-- `npm run db:init`: Init/reset database
+- `npm run db:init`: Inisialisasi schema dan jalankan migration database
+- `npm run db:restore -- path/backup.json`: Restore backup JSON (wajib `RESTORE_CONFIRM=RESTORE_KASIR_MINI`)
 - `npm test`: Jalankan semua test API (40 tests)
 - `npm run vercel-build`: Init database saat build Vercel. Build akan gagal jika production tidak memakai Turso remote.
 
@@ -107,8 +108,10 @@ Database akan ter-inisialisasi otomatis saat build via `vercel-build` script. Ji
 ```
 ├── db/
 │   ├── connection.js   # LibSQL client (@libsql/client)
-│   ├── query.js        # Helper: execute, getOne, getAll, run, batch
-│   └── init.js         # Schema + seed (async)
+│   ├── query.js        # Helper query + transaction
+│   ├── migrations.js   # Migration schema versioned
+│   ├── restore.js      # Restore backup tervalidasi
+│   └── init.js         # Bootstrap schema + seed + migrations
 ├── middleware/
 │   └── auth.js         # Session management (async)
 ├── routes/
@@ -125,6 +128,18 @@ Database akan ter-inisialisasi otomatis saat build via `vercel-build` script. Ji
 ├── vercel.json         # Konfigurasi Vercel
 └── server.js           # Express app
 ```
+
+## Backup dan Restore
+
+Backup diunduh dari halaman Pengaturan atau endpoint `GET /api/backup`. File berisi versi schema, jumlah record, checksum SHA-256, termasuk transaksi yang dibatalkan.
+
+Restore mengganti seluruh data transaksi dan pengaturan, tetapi tidak mengubah akun admin maupun session:
+
+```bash
+RESTORE_CONFIRM=RESTORE_KASIR_MINI npm run db:restore -- ./kasir-backup-YYYYMMDD.json
+```
+
+Checksum, jumlah record, format, dan kompatibilitas versi schema diverifikasi sebelum restore. Restore dijalankan dalam satu write transaction sehingga kegagalan akan di-rollback.
 
 ## Smoke Test
 ```bash

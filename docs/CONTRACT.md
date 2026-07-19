@@ -65,6 +65,16 @@ Lihat bagian lama di bawah untuk detail login/logout/me.
 | Status kasbon | `belum_lunas` \| `lunas` |
 | Default filter tanggal | Hari ini |
 
+Validasi filter tanggal:
+- `dari` dan `sampai` harus dikirim berpasangan.
+- Format wajib `YYYY-MM-DD` dan harus merupakan tanggal kalender yang valid.
+- `dari` tidak boleh setelah `sampai`.
+- Semua perhitungan "hari ini" menggunakan timezone `Asia/Jakarta`.
+
+Untuk `POST` transaksi, client dapat mengirim header `Idempotency-Key` (8-100 karakter: huruf, angka, `.`, `_`, `:`, atau `-`). Pengulangan key dengan payload yang sama mengembalikan transaksi sebelumnya tanpa membuat duplikat. Penggunaan key yang sama untuk payload berbeda ditolak dengan response 409.
+
+Transaksi keuangan tidak dihapus permanen. Endpoint `DELETE` melakukan pembatalan logis dan menerima body opsional `{ "reason": "..." }`. Record yang dibatalkan tetap ada di backup dan riwayat audit, tetapi tidak masuk daftar aktif atau perhitungan kas.
+
 ### Pemasukan
 
 #### GET `/api/pemasukan?dari=&sampai=`
@@ -118,9 +128,13 @@ Response 400: pesan error Bahasa Indonesia.
 
 #### DELETE `/api/pemasukan/:id`
 
-Response 200 jika sukses.
+Body opsional:
 
-Response 404: `"ID tidak ditemukan"`
+```json
+{ "reason": "Salah input nominal" }
+```
+
+Response 200 menandai transaksi sebagai dibatalkan. Response 404: `"ID tidak ditemukan"`.
 
 ---
 
@@ -162,6 +176,8 @@ Sama seperti pemasukan.
 - `status=belum_lunas` (default)
 - `status=lunas`
 - `status=semua`
+
+Nilai status lain ditolak dengan response 400.
 
 Response termasuk `sisa` dan `status`.
 
@@ -218,9 +234,72 @@ Response:
 
 Response 400 jika bayar melebihi sisa.
 
+Update saldo dan pencatatan pembayaran dilakukan dalam satu write transaction. Jika saldo berubah oleh request lain sebelum update, response 409 dikembalikan dan client harus memuat ulang data.
+
 #### DELETE `/api/kasbon/:id`
 
-Sama seperti yang lain. Catatan: pembayaran terkait ikut terhapus via FK CASCADE.
+Membatalkan kasbon secara logis. Semua pembayaran terkait ikut ditandai batal dalam write transaction yang sama sehingga tidak lagi memengaruhi ringkasan kas. Kasbon dan pembayaran tetap terlihat di riwayat audit.
+
+---
+
+## Ringkasan dan Riwayat
+
+### GET `/api/ringkasan`
+
+Ringkasan kas harian menggunakan rumus:
+
+```text
+total_kas_masuk = pemasukan_penjualan + pembayaran_kasbon
+sisa_kas = total_kas_masuk - pengeluaran
+```
+
+Field utama:
+
+| Field | Arti |
+|---|---|
+| `pemasukan_penjualan` | Total penjualan tunai hari ini |
+| `pembayaran_kasbon` | Total pembayaran kasbon yang diterima hari ini |
+| `total_kas_masuk` | Penjualan tunai + pembayaran kasbon |
+| `pengeluaran` | Total pengeluaran hari ini |
+| `sisa_kas` | Total kas masuk dikurangi pengeluaran |
+| `kasbon_outstanding` | Total sisa seluruh kasbon aktif |
+| `kasbon_aktif` | Jumlah record kasbon yang belum lunas |
+
+Field `pemasukan` tetap tersedia sebagai alias `pemasukan_penjualan` untuk kompatibilitas client lama. Field `kasbon_jumlah_orang` tetap tersedia sebagai alias `kasbon_aktif`, tetapi tidak menyatakan jumlah pelanggan unik.
+
+### GET `/api/riwayat?dari=&sampai=`
+
+Setiap item memiliki field tambahan:
+
+| Field | Nilai | Arti |
+|---|---|---|
+| `arah` | `masuk` | Menambah kas: penjualan atau pembayaran kasbon |
+| `arah` | `keluar` | Mengurangi kas: pengeluaran |
+| `arah` | `non_kas` | Tidak mengubah kas: pembuatan kasbon |
+| `dampak_kas` | integer | Perubahan kas bertanda; positif masuk, negatif keluar, nol non-kas/batal |
+| `dibatalkan` | `0` \| `1` | Menandakan transaksi telah dibatalkan |
+| `voided_at` | datetime \| `null` | Waktu pembatalan |
+| `void_reason` | string \| `null` | Alasan pembatalan |
+
+### GET `/api/backup`
+
+Menghasilkan JSON dari satu consistent read transaction. Metadata backup:
+
+| Field | Arti |
+|---|---|
+| `format` | Selalu `kasir-mini-backup` |
+| `schema_version` | Versi migration database |
+| `exported_at` | Waktu export ISO-8601 |
+| `counts` | Jumlah record setiap tabel |
+| `checksum_sha256` | Checksum bagian data backup |
+
+Backup mencakup transaksi aktif dan yang dibatalkan. Restore tidak disediakan sebagai endpoint HTTP; jalankan dari lingkungan tepercaya:
+
+```bash
+RESTORE_CONFIRM=RESTORE_KASIR_MINI npm run db:restore -- path/backup.json
+```
+
+Restore memverifikasi format, versi schema, counts, dan checksum sebelum mengganti data dalam satu write transaction. Akun admin dan session tidak ikut diganti.
 
 ---
 

@@ -24,17 +24,29 @@
 
       listEl.innerHTML = items.map(item => {
         let icon = '📋';
-        let color = '';
-        if (item.tipe === 'pemasukan') { icon = '📈'; color = 'income'; }
-        else if (item.tipe === 'pengeluaran') { icon = '📉'; color = 'expense'; }
-        else if (item.tipe === 'kasbon') { icon = '📒'; color = 'kasbon'; }
-        else if (item.tipe === 'kasbon_bayar') { icon = '💰'; color = ''; }
+        let typeLabel = item.tipe;
+        if (item.tipe === 'pemasukan') { icon = '📈'; typeLabel = 'Penjualan'; }
+        else if (item.tipe === 'pengeluaran') { icon = '📉'; typeLabel = 'Pengeluaran'; }
+        else if (item.tipe === 'kasbon') { icon = '📒'; typeLabel = 'Kasbon baru'; }
+        else if (item.tipe === 'kasbon_bayar') { icon = '💰'; typeLabel = 'Pembayaran kasbon'; }
+
+        const isVoided = Boolean(item.dibatalkan);
+        const directionLabel = isVoided
+          ? 'Dibatalkan · tidak memengaruhi kas'
+          : item.arah === 'masuk'
+            ? 'Kas masuk'
+            : item.arah === 'keluar'
+              ? 'Kas keluar'
+              : 'Non-kas';
+        const amountPrefix = isVoided ? '' : item.arah === 'masuk' ? '+ ' : item.arah === 'keluar' ? '- ' : '';
+        const amountClass = isVoided ? 'riwayat-amount--voided' : `riwayat-amount--${item.arah || 'non_kas'}`;
 
         return `
-          <div class="list-item">
-            <div class="main ${color}">${icon} ${item.label}</div>
-            <div class="meta">${window.KasirApp.formatDateID(item.tanggal.split(' ')[0] || item.tanggal)} · ${item.tipe}</div>
-            <div class="nominal" style="font-size:15px; margin-top:4px;">${window.KasirApp.formatRupiah(item.nominal)}</div>
+          <div class="list-item ${isVoided ? 'riwayat-item--voided' : ''}">
+            <div class="main">${icon} ${window.KasirApp.escapeHtml(item.label)} ${isVoided ? '<span class="badge">Dibatalkan</span>' : ''}</div>
+            <div class="meta">${window.KasirApp.formatDateID(item.tanggal.split(' ')[0] || item.tanggal)} · ${window.KasirApp.escapeHtml(typeLabel)} · ${directionLabel}</div>
+            ${isVoided && item.void_reason ? `<div class="meta small">Alasan: ${window.KasirApp.escapeHtml(item.void_reason)}</div>` : ''}
+            <div class="nominal ${amountClass}">${amountPrefix}${window.KasirApp.formatRupiah(item.nominal)}</div>
           </div>
         `;
       }).join('');

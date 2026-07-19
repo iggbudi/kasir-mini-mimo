@@ -24,7 +24,10 @@
         <p class="dashboard-hero__cash-label">Sisa kas hari ini</p>
         <p class="dashboard-hero__cash-value" id="statCash">-</p>
         <p class="dashboard-hero__mini-summary">
-          Masuk <strong id="statIncome">-</strong> · Keluar <strong id="statExpense">-</strong>
+          Kas masuk <strong id="statIncome">-</strong> · Keluar <strong id="statExpense">-</strong>
+          <span class="dashboard-hero__cash-breakdown">
+            Penjualan <strong id="statSales">-</strong> · Bayar kasbon <strong id="statKasbonPayment">-</strong>
+          </span>
         </p>
       </section>
 
@@ -111,12 +114,16 @@
         const ringkasan = await KasirApp.apiFetch('/api/ringkasan');
         const data = ringkasan.data || {};
         document.getElementById('statCash').textContent = KasirApp.formatRupiah(data.sisa_kas || 0);
-        document.getElementById('statIncome').textContent = KasirApp.formatRupiahShort(data.pemasukan || 0);
+        document.getElementById('statIncome').textContent = KasirApp.formatRupiahShort(data.total_kas_masuk ?? data.pemasukan ?? 0);
+        document.getElementById('statSales').textContent = KasirApp.formatRupiahShort(data.pemasukan_penjualan ?? data.pemasukan ?? 0);
+        document.getElementById('statKasbonPayment').textContent = KasirApp.formatRupiahShort(data.pembayaran_kasbon || 0);
         document.getElementById('statExpense').textContent = KasirApp.formatRupiahShort(data.pengeluaran || 0);
         document.getElementById('statKasbon').textContent = KasirApp.formatRupiahShort(data.kasbon_outstanding || 0);
       } catch (_e) {
         document.getElementById('statCash').textContent = '-';
         document.getElementById('statIncome').textContent = '-';
+        document.getElementById('statSales').textContent = '-';
+        document.getElementById('statKasbonPayment').textContent = '-';
         document.getElementById('statExpense').textContent = '-';
         document.getElementById('statKasbon').textContent = '-';
       }

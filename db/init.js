@@ -1,7 +1,7 @@
 require('../utils/env');
 const bcrypt = require('bcryptjs');
-const db = require('./connection');
 const { execute, getOne, run } = require('./query');
+const { runMigrations } = require('./migrations');
 
 async function initDb() {
   await execute('PRAGMA foreign_keys = ON');
@@ -42,7 +42,10 @@ async function initDb() {
       harga      INTEGER NOT NULL CHECK (harga > 0),
       total      INTEGER GENERATED ALWAYS AS (quantity * harga) STORED,
       catatan    TEXT,
-      tanggal    TEXT NOT NULL DEFAULT (datetime('now', 'localtime'))
+      tanggal    TEXT NOT NULL DEFAULT (datetime('now', 'localtime')),
+      request_id TEXT,
+      voided_at  TEXT,
+      void_reason TEXT
     )
   `)
 
@@ -52,7 +55,10 @@ async function initDb() {
       keterangan TEXT NOT NULL,
       nominal    INTEGER NOT NULL CHECK (nominal > 0),
       catatan    TEXT,
-      tanggal    TEXT NOT NULL DEFAULT (datetime('now', 'localtime'))
+      tanggal    TEXT NOT NULL DEFAULT (datetime('now', 'localtime')),
+      request_id TEXT,
+      voided_at  TEXT,
+      void_reason TEXT
     )
   `)
 
@@ -64,7 +70,10 @@ async function initDb() {
       sisa       INTEGER NOT NULL CHECK (sisa >= 0),
       keterangan TEXT,
       status     TEXT NOT NULL DEFAULT 'belum_lunas' CHECK (status IN ('belum_lunas', 'lunas')),
-      tanggal    TEXT NOT NULL DEFAULT (datetime('now', 'localtime'))
+      tanggal    TEXT NOT NULL DEFAULT (datetime('now', 'localtime')),
+      request_id TEXT,
+      voided_at  TEXT,
+      void_reason TEXT
     )
   `)
 
@@ -73,9 +82,14 @@ async function initDb() {
       id         INTEGER PRIMARY KEY AUTOINCREMENT,
       kasbon_id  INTEGER NOT NULL REFERENCES kasbon(id) ON DELETE CASCADE,
       bayar      INTEGER NOT NULL CHECK (bayar > 0),
-      tanggal    TEXT NOT NULL DEFAULT (datetime('now', 'localtime'))
+      tanggal    TEXT NOT NULL DEFAULT (datetime('now', 'localtime')),
+      request_id TEXT,
+      voided_at  TEXT,
+      void_reason TEXT
     )
   `)
+
+  await runMigrations();
 
   await execute('CREATE INDEX IF NOT EXISTS idx_pemasukan_tanggal ON pemasukan(tanggal)')
   await execute('CREATE INDEX IF NOT EXISTS idx_pengeluaran_tanggal ON pengeluaran(tanggal)')
