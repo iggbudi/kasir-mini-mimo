@@ -14,7 +14,8 @@ router.get('/', async (_req, res) => {
       'SELECT * FROM pengeluaran ORDER BY id',
       'SELECT * FROM kasbon ORDER BY id',
       'SELECT * FROM kasbon_bayar ORDER BY id',
-      'SELECT * FROM setting ORDER BY key'
+      'SELECT * FROM setting ORDER BY key',
+      'SELECT * FROM master_barang ORDER BY id'
     ], 'read');
 
     const schemaVersion = Number(results[0].rows[0]?.version || 0);
@@ -24,12 +25,14 @@ router.get('/', async (_req, res) => {
     const kasbon = toPlainRows(results[3]);
     const kasbonBayar = toPlainRows(results[4]);
     const settings = toPlainRows(results[5]);
+    const masterBarang = toPlainRows(results[6]);
     const data = {
       pemasukan,
       pengeluaran,
       kasbon,
       kasbon_bayar: kasbonBayar,
-      setting: settings
+      setting: settings,
+      master_barang: masterBarang
     };
     const checksum = crypto.createHash('sha256').update(JSON.stringify(data)).digest('hex');
 
@@ -43,7 +46,8 @@ router.get('/', async (_req, res) => {
         pengeluaran: pengeluaran.length,
         kasbon: kasbon.length,
         kasbon_bayar: kasbonBayar.length,
-        setting: settings.length
+        setting: settings.length,
+        master_barang: masterBarang.length
       },
       checksum_sha256: checksum,
       ...data

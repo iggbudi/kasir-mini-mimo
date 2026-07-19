@@ -4,7 +4,8 @@ Aplikasi kasir sederhana berbasis web untuk warung sembako kecil. Mendukung penc
 
 ## Fitur Utama
 - Login admin sederhana
-- Pemasukan (penjualan): tambah, lihat daftar, batalkan dengan jejak audit, filter tanggal
+- Master barang: nama, harga retail, harga grosir opsional, arsip
+- Pemasukan (penjualan): pilih master barang dan jenis harga retail/grosir, batalkan dengan jejak audit, filter tanggal
 - Pengeluaran: tambah, lihat, batalkan dengan jejak audit, filter tanggal
 - Kasbon: tambah, bayar bertahap, batalkan dengan jejak audit, lihat status + progress bar
 - Dashboard ringkasan hari ini (quick stats)
@@ -117,6 +118,7 @@ Database akan ter-inisialisasi otomatis saat build via `vercel-build` script. Ji
 ├── routes/
 │   ├── auth.js         # Login/logout/me
 │   ├── setting.js      # Nama warung
+│   ├── barang.js       # Master barang + harga retail/grosir
 │   ├── pemasukan.js    # CRUD pemasukan
 │   ├── pengeluaran.js  # CRUD pengeluaran
 │   ├── kasbon.js       # CRUD kasbon + bayar
@@ -131,7 +133,7 @@ Database akan ter-inisialisasi otomatis saat build via `vercel-build` script. Ji
 
 ## Backup dan Restore
 
-Backup diunduh dari halaman Pengaturan atau endpoint `GET /api/backup`. File berisi versi schema, jumlah record, checksum SHA-256, termasuk transaksi yang dibatalkan.
+Backup diunduh dari halaman Pengaturan atau endpoint `GET /api/backup`. File berisi versi schema, jumlah record, checksum SHA-256, master barang, dan transaksi yang dibatalkan.
 
 Restore mengganti seluruh data transaksi dan pengaturan, tetapi tidak mengubah akun admin maupun session:
 

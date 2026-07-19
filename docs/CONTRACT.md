@@ -75,6 +75,31 @@ Untuk `POST` transaksi, client dapat mengirim header `Idempotency-Key` (8-100 ka
 
 Transaksi keuangan tidak dihapus permanen. Endpoint `DELETE` melakukan pembatalan logis dan menerima body opsional `{ "reason": "..." }`. Record yang dibatalkan tetap ada di backup dan riwayat audit, tetapi tidak masuk daftar aktif atau perhitungan kas.
 
+### Master Barang
+
+Master barang menyimpan harga default tanpa mengubah histori transaksi lama. Harga pada transaksi pemasukan tetap disimpan sebagai snapshot.
+
+Field:
+
+| Field | Aturan |
+|---|---|
+| `nama` | Wajib, unik tanpa membedakan kapital/spasi ganda, maksimal 100 karakter |
+| `harga_retail` | Integer positif |
+| `harga_grosir` | Opsional, integer positif dan tidak melebihi harga retail |
+| `aktif` | `1` aktif, `0` diarsipkan |
+
+Endpoint:
+
+| Method | Endpoint | Keterangan |
+|---|---|---|
+| GET | `/api/barang?status=aktif&q=` | Daftar/filter master barang |
+| POST | `/api/barang` | Tambah barang |
+| PUT | `/api/barang/:id` | Ubah nama dan harga |
+| DELETE | `/api/barang/:id` | Arsipkan tanpa menghapus histori |
+| POST | `/api/barang/:id/aktifkan` | Aktifkan kembali barang |
+
+UI pemasukan menyediakan pilihan eksplisit `Retail` atau `Grosir` jika barang memiliki harga grosir. Harga satuan tetap dapat disesuaikan sebelum transaksi disimpan.
+
 ### Pemasukan
 
 #### GET `/api/pemasukan?dari=&sampai=`
@@ -107,6 +132,7 @@ Body:
 
 ```json
 {
+  "barang_id": 12,
   "barang": "Beras 5kg",
   "quantity": 2,
   "harga": 15000,
@@ -117,7 +143,8 @@ Body:
 Validasi:
 | Field | Aturan |
 |---|---|
-| barang | wajib, 1-100 karakter |
+| barang_id | opsional untuk kompatibilitas; jika diisi harus menunjuk master aktif |
+| barang | wajib jika `barang_id` tidak diisi; menjadi snapshot nama transaksi |
 | quantity | wajib, integer ≥ 1 |
 | harga | wajib, integer > 0 |
 | catatan | opsional, max 200 karakter |
@@ -293,7 +320,7 @@ Menghasilkan JSON dari satu consistent read transaction. Metadata backup:
 | `counts` | Jumlah record setiap tabel |
 | `checksum_sha256` | Checksum bagian data backup |
 
-Backup mencakup transaksi aktif dan yang dibatalkan. Restore tidak disediakan sebagai endpoint HTTP; jalankan dari lingkungan tepercaya:
+Backup mencakup master barang, transaksi aktif, dan transaksi yang dibatalkan. Restore tidak disediakan sebagai endpoint HTTP; jalankan dari lingkungan tepercaya:
 
 ```bash
 RESTORE_CONFIRM=RESTORE_KASIR_MINI npm run db:restore -- path/backup.json

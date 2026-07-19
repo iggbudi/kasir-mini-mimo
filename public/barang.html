@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Master Barang — Kasir Mini</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="manifest" href="/manifest.json">
+</head>
+<body>
+  <main class="container">
+    <div class="page-header">
+      <a href="/" class="back-link">← Beranda</a>
+      <span class="muted small" id="warung"></span>
+    </div>
+
+    <h1 class="title">Master Barang</h1>
+    <p class="muted">Harga grosir bersifat opsional dan dapat dipilih saat mencatat pemasukan.</p>
+
+    <section class="card mt-3">
+      <h3 class="section-title" id="formTitle">Tambah Barang</h3>
+      <form id="formBarang">
+        <input id="barangId" type="hidden">
+        <label for="nama">Nama Barang</label>
+        <input id="nama" type="text" maxlength="100" required placeholder="Contoh: Beras 5kg">
+
+        <div class="form-row mt-2">
+          <div>
+            <label for="hargaRetail">Harga Retail (Rp)</label>
+            <input id="hargaRetail" type="number" min="1" required placeholder="75000">
+          </div>
+          <div>
+            <label for="hargaGrosir">Harga Grosir (Rp)</label>
+            <input id="hargaGrosir" type="number" min="1" placeholder="72000">
+          </div>
+        </div>
+
+        <p class="small muted mt-2">Kosongkan harga grosir jika barang hanya dijual dengan harga retail.</p>
+        <p class="form-error" id="error"></p>
+
+        <div class="form-row mt-2">
+          <button type="submit" class="primary" id="btnSubmit">
+            <span class="btn-label">Simpan Barang</span>
+            <span class="btn-spinner"></span>
+          </button>
+          <button type="button" class="secondary hidden" id="btnCancelEdit">Batal Edit</button>
+        </div>
+      </form>
+    </section>
+
+    <section class="card mt-3">
+      <div class="form-row" style="align-items:end;">
+        <div>
+          <label for="search">Cari Barang</label>
+          <input id="search" type="search" placeholder="Ketik nama barang">
+        </div>
+        <div style="max-width:130px;">
+          <label for="status">Status</label>
+          <select id="status">
+            <option value="aktif">Aktif</option>
+            <option value="arsip">Diarsipkan</option>
+            <option value="semua">Semua</option>
+          </select>
+        </div>
+      </div>
+      <div id="list" class="list mt-3"></div>
+    </section>
+  </main>
+
+  <script src="/js/app.js"></script>
+  <script src="/js/barang.js"></script>
+  <script>
+    window.KasirApp.renderBottomNav('');
+    window.KasirApp.getSetting?.().then(r => {
+      document.getElementById('warung').textContent = r.data.nama_warung || '';
+    }).catch(() => {});
+  </script>
+</body>
+</html>

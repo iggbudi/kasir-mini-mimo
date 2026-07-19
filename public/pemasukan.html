@@ -27,8 +27,11 @@
       <form id="formPemasukan">
         <div class="form-row">
           <div>
-            <label>Barang</label>
-            <input id="barang" type="text" required placeholder="Contoh: Beras 5kg">
+            <label for="barangId">Barang</label>
+            <select id="barangId" required>
+              <option value="">Memuat master barang...</option>
+            </select>
+            <p class="small muted mt-2"><a href="/barang.html">Kelola master barang</a></p>
           </div>
           <div style="max-width:90px;">
             <label>Qty</label>
@@ -37,6 +40,13 @@
         </div>
 
         <div class="form-row mt-2">
+          <div style="max-width:130px;">
+            <label for="jenisHarga">Jenis Harga</label>
+            <select id="jenisHarga">
+              <option value="retail">Retail</option>
+              <option value="grosir" disabled>Grosir</option>
+            </select>
+          </div>
           <div>
             <label>Harga Satuan (Rp)</label>
             <input id="harga" type="number" min="1" required placeholder="15000">

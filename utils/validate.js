@@ -34,6 +34,11 @@ function requirePositiveInteger(value, fieldName = 'Field') {
   return num;
 }
 
+function optionalPositiveInteger(value, fieldName = 'Field') {
+  if (value === undefined || value === null || value === '') return null;
+  return requirePositiveInteger(value, fieldName);
+}
+
 function requirePositiveId(value) {
   const str = String(value ?? '');
   if (!/^[1-9]\d*$/.test(str)) {
@@ -95,6 +100,7 @@ module.exports = {
   ValidationError,
   requireString,
   requirePositiveInteger,
+  optionalPositiveInteger,
   requirePositiveId,
   requireDateRange,
   optionalString,

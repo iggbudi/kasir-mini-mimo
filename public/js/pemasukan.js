@@ -7,6 +7,8 @@
   const errorEl = document.getElementById('error');
   const previewEl = document.getElementById('previewTotal');
   const btnSubmit = document.getElementById('btnSubmit');
+  const barangSelect = document.getElementById('barangId');
+  const jenisHargaSelect = document.getElementById('jenisHarga');
   const filterBar = document.getElementById('filterBar');
   const customDateRange = document.getElementById('customDateRange');
   const btnFilterDate = document.getElementById('btnFilterDate');
@@ -18,6 +20,7 @@
   let currentFilter = 'today';
   let currentDateDari = '';
   let currentDateSampai = '';
+  let masterBarang = [];
 
   function getDateParams() {
     const today = KasirApp.getTodayStr();
@@ -117,6 +120,41 @@
     loadData();
   });
 
+  async function loadMasterBarang() {
+    try {
+      const response = await KasirApp.apiFetch('/api/barang?status=aktif');
+      masterBarang = response.data || [];
+      barangSelect.innerHTML = '<option value="">Pilih barang</option>' + masterBarang.map(item => `
+        <option value="${item.id}">${KasirApp.escapeHtml(item.nama)}</option>
+      `).join('');
+
+      if (masterBarang.length === 0) {
+        barangSelect.innerHTML = '<option value="">Belum ada master barang</option>';
+      }
+    } catch (err) {
+      barangSelect.innerHTML = '<option value="">Gagal memuat barang</option>';
+      errorEl.textContent = err.message || 'Gagal memuat master barang';
+    }
+  }
+
+  function applySelectedPrice() {
+    const selected = masterBarang.find(item => String(item.id) === barangSelect.value);
+    const wholesaleOption = jenisHargaSelect.querySelector('option[value="grosir"]');
+    const hasWholesale = Boolean(selected?.harga_grosir);
+    wholesaleOption.disabled = !hasWholesale;
+
+    if (!selected) {
+      jenisHargaSelect.value = 'retail';
+      document.getElementById('harga').value = '';
+      return;
+    }
+    if (!hasWholesale && jenisHargaSelect.value === 'grosir') jenisHargaSelect.value = 'retail';
+
+    document.getElementById('harga').value = jenisHargaSelect.value === 'grosir'
+      ? selected.harga_grosir
+      : selected.harga_retail;
+  }
+
   // Preview total
   function updatePreview() {
     const qty = parseInt(document.getElementById('quantity').value, 10) || 0;
@@ -128,6 +166,15 @@
     }
   }
 
+  barangSelect.addEventListener('change', () => {
+    jenisHargaSelect.value = 'retail';
+    applySelectedPrice();
+    updatePreview();
+  });
+  jenisHargaSelect.addEventListener('change', () => {
+    applySelectedPrice();
+    updatePreview();
+  });
   document.getElementById('quantity').addEventListener('input', updatePreview);
   document.getElementById('harga').addEventListener('input', updatePreview);
 
@@ -136,8 +183,10 @@
     e.preventDefault();
     errorEl.textContent = '';
 
+    const selected = masterBarang.find(item => String(item.id) === barangSelect.value);
     const data = {
-      barang: document.getElementById('barang').value.trim(),
+      barang_id: barangSelect.value,
+      barang: selected?.nama || '',
       quantity: document.getElementById('quantity').value,
       harga: document.getElementById('harga').value,
       catatan: document.getElementById('catatan').value.trim() || null
@@ -160,6 +209,7 @@
       KasirApp.clearIdempotencyKey(requestScope, data);
       KasirApp.showToast('Pemasukan berhasil disimpan');
       form.reset();
+      jenisHargaSelect.querySelector('option[value="grosir"]').disabled = true;
       previewEl.textContent = '';
       loadData();
     } catch (err) {
@@ -170,5 +220,6 @@
     }
   });
 
+  loadMasterBarang();
   loadData();
 })();

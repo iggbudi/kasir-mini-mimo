@@ -5,6 +5,7 @@ const {
   ValidationError,
   requireString,
   requirePositiveInteger,
+  optionalPositiveInteger,
   requirePositiveId,
   requireDateRange,
   optionalString,
@@ -13,7 +14,7 @@ const {
 const { getTodayWib, getNowWib } = require('../utils/date');
 
 const router = express.Router();
-const PUBLIC_COLUMNS = 'id, barang, quantity, harga, total, catatan, tanggal';
+const PUBLIC_COLUMNS = 'id, barang_id, barang, quantity, harga, total, catatan, tanggal';
 
 router.get('/', async (req, res) => {
   try {
@@ -34,26 +35,49 @@ router.get('/', async (req, res) => {
 
 router.post('/', async (req, res) => {
   try {
-    const barang = requireString(req.body?.barang, 'Barang');
+    const barangId = optionalPositiveInteger(req.body?.barang_id, 'Barang');
+    let barang = optionalString(req.body?.barang, 'Barang');
     const quantity = requirePositiveInteger(req.body?.quantity, 'Quantity');
     const harga = requirePositiveInteger(req.body?.harga, 'Harga');
     const catatan = optionalString(req.body?.catatan, 'Catatan');
     const requestId = optionalRequestId(req.get('Idempotency-Key'));
+
+    if (requestId) {
+      const replay = await getOne(`SELECT ${PUBLIC_COLUMNS} FROM pemasukan WHERE request_id = ?`, [requestId]);
+      if (replay) {
+        const samePayload = (replay.barang_id ?? null) === barangId
+          && (barangId !== null || replay.barang === barang)
+          && replay.quantity === quantity
+          && replay.harga === harga
+          && (replay.catatan ?? null) === catatan;
+        if (!samePayload) return fail(res, 409, 'Idempotency-Key sudah dipakai untuk data berbeda');
+        return success(res, replay);
+      }
+    }
+
+    if (barangId !== null) {
+      const master = await getOne('SELECT nama FROM master_barang WHERE id = ? AND aktif = 1', [barangId]);
+      if (!master) return fail(res, 400, 'Barang master tidak ditemukan atau sudah diarsipkan');
+      barang = master.nama;
+    } else {
+      barang = requireString(req.body?.barang, 'Barang');
+    }
 
     if (barang.length > 100) return fail(res, 400, 'Barang maksimal 100 karakter');
     if (catatan && catatan.length > 200) return fail(res, 400, 'Catatan maksimal 200 karakter');
     if (!Number.isSafeInteger(quantity * harga)) return fail(res, 400, 'Total pemasukan terlalu besar');
 
     const info = await run(`
-      INSERT INTO pemasukan (barang, quantity, harga, catatan, tanggal, request_id)
-      VALUES (?, ?, ?, ?, ?, ?)
+      INSERT INTO pemasukan (barang_id, barang, quantity, harga, catatan, tanggal, request_id)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
       ON CONFLICT DO NOTHING
-    `, [barang, quantity, harga, catatan, getNowWib(), requestId]);
+    `, [barangId, barang, quantity, harga, catatan, getNowWib(), requestId]);
 
     if (info.rowsAffected === 0) {
       const existing = await getOne(`SELECT ${PUBLIC_COLUMNS} FROM pemasukan WHERE request_id = ?`, [requestId]);
       const samePayload = existing
-        && existing.barang === barang
+        && (existing.barang_id ?? null) === barangId
+        && (barangId !== null || existing.barang === barang)
         && existing.quantity === quantity
         && existing.harga === harga
         && (existing.catatan ?? null) === catatan;
