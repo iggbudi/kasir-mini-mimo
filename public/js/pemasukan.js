@@ -144,10 +144,22 @@
   }
 
   function printReceipt(sale) {
+    const previousTitle = document.title;
+    const cleanup = () => {
+      document.body.classList.remove('printing-receipt');
+      receiptPrint.setAttribute('aria-hidden', 'true');
+      receiptPrint.innerHTML = '';
+      document.title = previousTitle;
+    };
+
     receiptPrint.innerHTML = receiptHtml(sale);
+    receiptPrint.setAttribute('aria-hidden', 'false');
     document.body.classList.add('printing-receipt');
+    document.title = sale.nomor_nota || 'Nota Penjualan';
+    window.addEventListener('afterprint', cleanup, { once: true });
     window.print();
-    setTimeout(() => document.body.classList.remove('printing-receipt'), 500);
+    // Fallback untuk browser mobile yang tidak memicu event afterprint.
+    setTimeout(cleanup, 30000);
   }
 
   function showReceipt(sale, canPrint) {
@@ -157,9 +169,10 @@
       <div class="modal receipt-modal">
         <h3 class="modal-title">Preview Nota</h3>
         ${receiptHtml(sale)}
+        ${canPrint ? '<p class="receipt-print-hint">Printer: Thermal 58 mm · Margin none · Skala 100%</p>' : ''}
         <div class="modal-actions mt-3">
           <button class="secondary" data-action="close">Tutup</button>
-          ${canPrint ? '<button class="primary" data-action="print">Cetak Nota</button>' : ''}
+          ${canPrint ? '<button class="primary" data-action="print">Cetak Thermal 58mm</button>' : ''}
         </div>
       </div>
     `;

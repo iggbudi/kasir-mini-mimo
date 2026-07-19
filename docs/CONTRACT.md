@@ -166,7 +166,7 @@ Mengembalikan header dan seluruh detail untuk preview/cetak nota. Untuk transaks
 
 Membatalkan header dan seluruh detail secara atomik. Untuk transaksi lama gunakan query `?legacy=1`.
 
-Nota hanya berisi nomor nota, tanggal, detail barang, dan total. Cetak menggunakan layout thermal 58 mm melalui browser.
+Nota hanya berisi nomor nota, tanggal, jenis penjualan, detail barang, dan total. Mode cetak menggunakan layout thermal 58 mm (bukan A4), margin nol, area konten sempit, dan font monospace. Driver printer tetap perlu memakai paper size 58 mm/Receipt, margin none, dan skala 100%.
 
 ### Pemasukan Lama (Kompatibilitas)
 
