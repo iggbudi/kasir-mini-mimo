@@ -7,6 +7,8 @@ const { execute } = require('./db/query');
 const authRoutes = require('./routes/auth');
 const settingRoutes = require('./routes/setting');
 const barangRoutes = require('./routes/barang');
+const salesmanRoutes = require('./routes/salesman');
+const kulakanRoutes = require('./routes/kulakan');
 const penjualanRoutes = require('./routes/penjualan');
 const pemasukanRoutes = require('./routes/pemasukan');
 const pengeluaranRoutes = require('./routes/pengeluaran');
@@ -52,6 +54,8 @@ app.get('/logout', async (req, res) => {
 
 app.use('/api/setting', requireAuth, settingRoutes);
 app.use('/api/barang', requireAuth, barangRoutes);
+app.use('/api/salesman', requireAuth, salesmanRoutes);
+app.use('/api/kulakan', requireAuth, kulakanRoutes);
 app.use('/api/penjualan', requireAuth, penjualanRoutes);
 app.use('/api/pemasukan', requireAuth, pemasukanRoutes);
 app.use('/api/pengeluaran', requireAuth, pengeluaranRoutes);

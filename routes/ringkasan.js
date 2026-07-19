@@ -38,6 +38,11 @@ router.get('/', async (_req, res) => {
           WHERE voided_at IS NULL AND date(tanggal) = :today
         ), 0) AS pengeluaran,
         COALESCE((
+          SELECT SUM(total)
+          FROM kulakan
+          WHERE voided_at IS NULL AND date(tanggal) = :today
+        ), 0) AS kulakan,
+        COALESCE((
           SELECT SUM(sisa)
           FROM kasbon
           WHERE voided_at IS NULL AND status = 'belum_lunas'
@@ -52,12 +57,16 @@ router.get('/', async (_req, res) => {
     const pemasukanPenjualan = toSafeInteger(summary?.pemasukan_penjualan, 'pemasukan penjualan');
     const pembayaranKasbon = toSafeInteger(summary?.pembayaran_kasbon, 'pembayaran kasbon');
     const pengeluaran = toSafeInteger(summary?.pengeluaran, 'pengeluaran');
+    const kulakan = toSafeInteger(summary?.kulakan, 'kulakan');
     const kasbonOutstanding = toSafeInteger(summary?.kasbon_outstanding, 'kasbon outstanding');
     const kasbonAktif = toSafeInteger(summary?.kasbon_aktif, 'jumlah kasbon aktif');
     const totalKasMasuk = pemasukanPenjualan + pembayaranKasbon;
-    const sisaKas = totalKasMasuk - pengeluaran;
+    const totalKasKeluar = pengeluaran + kulakan;
+    const sisaKas = totalKasMasuk - totalKasKeluar;
 
-    if (!Number.isSafeInteger(totalKasMasuk) || !Number.isSafeInteger(sisaKas)) {
+    if (!Number.isSafeInteger(totalKasMasuk)
+      || !Number.isSafeInteger(totalKasKeluar)
+      || !Number.isSafeInteger(sisaKas)) {
       throw new Error('Nilai ringkasan kas melampaui batas aman');
     }
 
@@ -70,6 +79,8 @@ router.get('/', async (_req, res) => {
       pembayaran_kasbon: pembayaranKasbon,
       total_kas_masuk: totalKasMasuk,
       pengeluaran,
+      kulakan,
+      total_kas_keluar: totalKasKeluar,
       sisa_kas: sisaKas,
       kasbon_outstanding: kasbonOutstanding,
       kasbon_aktif: kasbonAktif,

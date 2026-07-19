@@ -26,7 +26,8 @@
         <p class="dashboard-hero__mini-summary">
           Kas masuk <strong id="statIncome">-</strong> · Keluar <strong id="statExpense">-</strong>
           <span class="dashboard-hero__cash-breakdown">
-            Penjualan <strong id="statSales">-</strong> · Bayar kasbon <strong id="statKasbonPayment">-</strong>
+            Penjualan <strong id="statSales">-</strong> · Bayar kasbon <strong id="statKasbonPayment">-</strong><br>
+            Biaya <strong id="statOperationalExpense">-</strong> · Kulakan <strong id="statPurchase">-</strong>
           </span>
         </p>
       </section>
@@ -50,10 +51,10 @@
         <div class="menu-card__label">Pengeluaran</div>
         <div class="menu-card__desc">Catat biaya</div>
       </a>
-      <a href="/kasbon.html" class="menu-card kasbon">
-        <div class="menu-card__icon">📒</div>
-        <div class="menu-card__label">Kasbon</div>
-        <div class="menu-card__desc">Hutang pelanggan</div>
+      <a href="/kulakan.html" class="menu-card kasbon">
+        <div class="menu-card__icon">📦</div>
+        <div class="menu-card__label">Kulakan</div>
+        <div class="menu-card__desc">Belanja dari salesman</div>
       </a>
       <a href="/riwayat.html" class="menu-card">
         <div class="menu-card__icon">📋</div>
@@ -64,6 +65,11 @@
         <div class="menu-card__icon">📦</div>
         <div class="menu-card__label">Master Barang</div>
         <div class="menu-card__desc">Atur harga jual</div>
+      </a>
+      <a href="/salesman.html" class="menu-card">
+        <div class="menu-card__icon">🧑‍💼</div>
+        <div class="menu-card__label">Master Salesman</div>
+        <div class="menu-card__desc">Kelola nama salesman</div>
       </a>
     </div>
   </main>
@@ -122,7 +128,9 @@
         document.getElementById('statIncome').textContent = KasirApp.formatRupiahShort(data.total_kas_masuk ?? data.pemasukan ?? 0);
         document.getElementById('statSales').textContent = KasirApp.formatRupiahShort(data.pemasukan_penjualan ?? data.pemasukan ?? 0);
         document.getElementById('statKasbonPayment').textContent = KasirApp.formatRupiahShort(data.pembayaran_kasbon || 0);
-        document.getElementById('statExpense').textContent = KasirApp.formatRupiahShort(data.pengeluaran || 0);
+        document.getElementById('statExpense').textContent = KasirApp.formatRupiahShort(data.total_kas_keluar ?? data.pengeluaran ?? 0);
+        document.getElementById('statOperationalExpense').textContent = KasirApp.formatRupiahShort(data.pengeluaran || 0);
+        document.getElementById('statPurchase').textContent = KasirApp.formatRupiahShort(data.kulakan || 0);
         document.getElementById('statKasbon').textContent = KasirApp.formatRupiahShort(data.kasbon_outstanding || 0);
       } catch (_e) {
         document.getElementById('statCash').textContent = '-';
@@ -130,6 +138,8 @@
         document.getElementById('statSales').textContent = '-';
         document.getElementById('statKasbonPayment').textContent = '-';
         document.getElementById('statExpense').textContent = '-';
+        document.getElementById('statOperationalExpense').textContent = '-';
+        document.getElementById('statPurchase').textContent = '-';
         document.getElementById('statKasbon').textContent = '-';
       }
     })();

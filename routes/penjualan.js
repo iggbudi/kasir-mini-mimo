@@ -13,7 +13,7 @@ const {
 const { getTodayWib, getNowWib } = require('../utils/date');
 
 const router = express.Router();
-const PRICE_TYPES = new Set(['retail', 'grosir', 'khusus']);
+const PRICE_TYPES = new Set(['retail', 'grosir']);
 
 class BusinessError extends Error {
   constructor(status, message) {
@@ -33,21 +33,19 @@ function parseItems(value) {
     const barangId = requirePositiveId(item?.barang_id);
     const quantity = requirePositiveInteger(item?.quantity, `Quantity ${field}`);
     const harga = requirePositiveInteger(item?.harga, `Harga ${field}`);
-    const jenisHarga = String(item?.jenis_harga || 'retail');
-    if (!PRICE_TYPES.has(jenisHarga)) throw new ValidationError(`Jenis harga ${field} tidak valid`);
     if (!Number.isSafeInteger(quantity * harga)) throw new ValidationError(`Subtotal ${field} terlalu besar`);
-    return { barang_id: barangId, quantity, harga, jenis_harga: jenisHarga };
+    return { barang_id: barangId, quantity, harga };
   });
 }
 
-function hashPayload(items) {
-  return crypto.createHash('sha256').update(JSON.stringify(items)).digest('hex');
+function hashPayload(jenisHarga, items) {
+  return crypto.createHash('sha256').update(JSON.stringify({ jenis_harga: jenisHarga, items })).digest('hex');
 }
 
 async function getSale(transaction, id) {
   const headerResult = await transaction.execute({
     sql: `
-      SELECT id, nomor_nota, total, tanggal, voided_at, void_reason
+      SELECT id, nomor_nota, jenis_harga, total, tanggal, voided_at, void_reason
       FROM penjualan WHERE id = ?
     `,
     args: [id]
@@ -57,7 +55,7 @@ async function getSale(transaction, id) {
 
   const itemsResult = await transaction.execute({
     sql: `
-      SELECT id, barang_id, barang, quantity, harga, total, jenis_harga
+      SELECT id, barang_id, barang, quantity, harga, total
       FROM pemasukan
       WHERE penjualan_id = ?
       ORDER BY id
@@ -76,6 +74,7 @@ router.get('/', async (req, res) => {
         p.nomor_nota,
         p.total,
         p.tanggal,
+        p.jenis_harga,
         COUNT(d.id) AS jumlah_item,
         0 AS legacy
       FROM penjualan p
@@ -90,6 +89,7 @@ router.get('/', async (req, res) => {
         'LAMA-' || l.id AS nomor_nota,
         l.total,
         l.tanggal,
+        CASE WHEN l.jenis_harga = 'grosir' THEN 'grosir' ELSE 'retail' END AS jenis_harga,
         1 AS jumlah_item,
         1 AS legacy
       FROM pemasukan l
@@ -109,9 +109,11 @@ router.get('/', async (req, res) => {
 
 router.post('/', async (req, res) => {
   try {
+    const jenisHarga = String(req.body?.jenis_harga || 'retail');
+    if (!PRICE_TYPES.has(jenisHarga)) throw new ValidationError('Jenis harga penjualan tidak valid');
     const parsedItems = parseItems(req.body?.items);
     const requestId = optionalRequestId(req.get('Idempotency-Key'));
-    const payloadHash = hashPayload(parsedItems);
+    const payloadHash = hashPayload(jenisHarga, parsedItems);
     const now = getNowWib();
 
     const sale = await withWriteTransaction(async (transaction) => {
@@ -132,7 +134,7 @@ router.post('/', async (req, res) => {
       const productIds = [...new Set(parsedItems.map(item => item.barang_id))];
       const productResult = await transaction.execute({
         sql: `
-          SELECT id, nama, harga_grosir
+          SELECT id, nama
           FROM master_barang
           WHERE aktif = 1 AND id IN (${productIds.map(() => '?').join(', ')})
         `,
@@ -145,9 +147,6 @@ router.post('/', async (req, res) => {
       for (const item of parsedItems) {
         const product = productById.get(item.barang_id);
         if (!product) throw new BusinessError(400, `Barang ID ${item.barang_id} tidak ditemukan atau diarsipkan`);
-        if (item.jenis_harga === 'grosir' && !product.harga_grosir) {
-          throw new BusinessError(400, `${product.nama} tidak memiliki harga grosir`);
-        }
 
         const subtotal = item.quantity * item.harga;
         total += subtotal;
@@ -158,10 +157,10 @@ router.post('/', async (req, res) => {
       const temporaryNumber = `TMP-${requestId || crypto.randomUUID()}`;
       const insertHeader = await transaction.execute({
         sql: `
-          INSERT INTO penjualan (nomor_nota, total, tanggal, request_id, payload_hash)
-          VALUES (?, ?, ?, ?, ?)
+          INSERT INTO penjualan (nomor_nota, jenis_harga, total, tanggal, request_id, payload_hash)
+          VALUES (?, ?, ?, ?, ?, ?)
         `,
-        args: [temporaryNumber, total, now, requestId, payloadHash]
+        args: [temporaryNumber, jenisHarga, total, now, requestId, payloadHash]
       });
       const saleId = Number(insertHeader.lastInsertRowid);
       const noteNumber = `PJ-${now.slice(0, 10).replace(/-/g, '')}-${String(saleId).padStart(6, '0')}`;
@@ -178,7 +177,7 @@ router.post('/', async (req, res) => {
         detail.quantity,
         detail.harga,
         now,
-        detail.jenis_harga
+        jenisHarga
       ]);
       await transaction.execute({
         sql: `
@@ -206,27 +205,28 @@ router.get('/:id', async (req, res) => {
     const id = requirePositiveId(req.params.id);
     if (req.query.legacy === '1') {
       const item = await getOne(`
-        SELECT id, barang_id, barang, quantity, harga, total, tanggal
+        SELECT id, barang_id, barang, quantity, harga, total, tanggal, jenis_harga
         FROM pemasukan WHERE id = ? AND penjualan_id IS NULL
       `, [id]);
       if (!item) return fail(res, 404, 'Penjualan tidak ditemukan');
       return success(res, {
         id: item.id,
         nomor_nota: `LAMA-${item.id}`,
+        jenis_harga: item.jenis_harga === 'grosir' ? 'grosir' : 'retail',
         total: item.total,
         tanggal: item.tanggal,
         legacy: true,
-        items: [{ ...item, jenis_harga: 'khusus' }]
+        items: [item]
       });
     }
 
     const header = await getOne(`
-      SELECT id, nomor_nota, total, tanggal, voided_at, void_reason
+      SELECT id, nomor_nota, jenis_harga, total, tanggal, voided_at, void_reason
       FROM penjualan WHERE id = ?
     `, [id]);
     if (!header) return fail(res, 404, 'Penjualan tidak ditemukan');
     const details = await getAll(`
-      SELECT id, barang_id, barang, quantity, harga, total, jenis_harga
+      SELECT id, barang_id, barang, quantity, harga, total
       FROM pemasukan WHERE penjualan_id = ? ORDER BY id
     `, [id]);
     return success(res, { ...header, legacy: false, items: details });

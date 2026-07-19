@@ -77,6 +77,22 @@ router.get('/', async (req, res) => {
       ${dateFilter}
     `;
 
+    const kulakanSql = `
+      SELECT
+        'kulakan' as tipe,
+        id,
+        nomor_kulakan || ' · ' || salesman_nama as label,
+        total as nominal,
+        'keluar' as arah,
+        CASE WHEN voided_at IS NULL THEN -total ELSE 0 END as dampak_kas,
+        CASE WHEN voided_at IS NULL THEN 0 ELSE 1 END as dibatalkan,
+        voided_at,
+        void_reason,
+        tanggal
+      FROM kulakan
+      ${dateFilter}
+    `;
+
     const bayarSql = `
       SELECT
         'kasbon_bayar' as tipe,
@@ -102,6 +118,8 @@ router.get('/', async (req, res) => {
       ${pengeluaranSql}
       UNION ALL
       ${kasbonSql}
+      UNION ALL
+      ${kulakanSql}
       UNION ALL
       ${bayarSql}
       ORDER BY tanggal DESC, tipe ASC, id DESC

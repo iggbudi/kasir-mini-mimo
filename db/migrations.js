@@ -67,6 +67,71 @@ const MIGRATIONS = [
       await transaction.execute('CREATE INDEX IF NOT EXISTS idx_penjualan_tanggal ON penjualan(tanggal)');
       await transaction.execute('CREATE INDEX IF NOT EXISTS idx_pemasukan_penjualan_id ON pemasukan(penjualan_id)');
     }
+  },
+  {
+    version: 5,
+    name: 'master_salesman',
+    up: async (transaction) => {
+      await transaction.execute(`
+        CREATE TABLE IF NOT EXISTS master_salesman (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          nama TEXT NOT NULL,
+          nama_normalized TEXT NOT NULL UNIQUE,
+          aktif INTEGER NOT NULL DEFAULT 1 CHECK (aktif IN (0, 1)),
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL,
+          archived_at TEXT
+        )
+      `);
+      await transaction.execute('CREATE INDEX IF NOT EXISTS idx_master_salesman_aktif_nama ON master_salesman(aktif, nama)');
+    }
+  },
+  {
+    version: 6,
+    name: 'kulakan_master_detail',
+    up: async (transaction) => {
+      await transaction.execute(`
+        CREATE TABLE IF NOT EXISTS kulakan (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          nomor_kulakan TEXT NOT NULL UNIQUE,
+          salesman_id INTEGER REFERENCES master_salesman(id),
+          salesman_nama TEXT NOT NULL,
+          total INTEGER NOT NULL CHECK (total > 0),
+          tanggal TEXT NOT NULL,
+          request_id TEXT,
+          payload_hash TEXT,
+          voided_at TEXT,
+          void_reason TEXT
+        )
+      `);
+      await transaction.execute(`
+        CREATE TABLE IF NOT EXISTS kulakan_item (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          kulakan_id INTEGER NOT NULL REFERENCES kulakan(id),
+          barang_id INTEGER REFERENCES master_barang(id),
+          barang_nama TEXT NOT NULL,
+          quantity INTEGER NOT NULL CHECK (quantity > 0),
+          harga_beli INTEGER NOT NULL CHECK (harga_beli > 0),
+          total INTEGER GENERATED ALWAYS AS (quantity * harga_beli) STORED
+        )
+      `);
+      await transaction.execute('CREATE UNIQUE INDEX IF NOT EXISTS idx_kulakan_request_id ON kulakan(request_id) WHERE request_id IS NOT NULL');
+      await transaction.execute('CREATE INDEX IF NOT EXISTS idx_kulakan_tanggal ON kulakan(tanggal)');
+      await transaction.execute('CREATE INDEX IF NOT EXISTS idx_kulakan_salesman_id ON kulakan(salesman_id)');
+      await transaction.execute('CREATE INDEX IF NOT EXISTS idx_kulakan_item_kulakan_id ON kulakan_item(kulakan_id)');
+    }
+  },
+  {
+    version: 7,
+    name: 'penjualan_price_type_on_header',
+    up: async (transaction) => {
+      await ensureColumn(
+        transaction,
+        'penjualan',
+        'jenis_harga',
+        "TEXT NOT NULL DEFAULT 'retail' CHECK (jenis_harga IN ('retail', 'grosir'))"
+      );
+    }
   }
 ];
 

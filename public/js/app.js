@@ -280,7 +280,7 @@ function renderBottomNav(activePage) {
     { id: 'home', href: '/', icon: '🏠', label: 'Beranda' },
     { id: 'pemasukan', href: '/pemasukan.html', icon: '🧾', label: 'Jual' },
     { id: 'pengeluaran', href: '/pengeluaran.html', icon: '📉', label: 'Keluar' },
-    { id: 'kasbon', href: '/kasbon.html', icon: '📒', label: 'Kasbon' },
+    { id: 'kulakan', href: '/kulakan.html', icon: '📦', label: 'Kulakan' },
     { id: 'atur', href: '/setting.html', icon: '⚙️', label: 'Atur' }
   ];
 

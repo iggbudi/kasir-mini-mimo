@@ -5,7 +5,9 @@ Aplikasi kasir sederhana berbasis web untuk warung sembako kecil. Mendukung penj
 ## Fitur Utama
 - Login admin sederhana
 - Master barang: nama, harga retail, harga grosir opsional, arsip
-- Penjualan master-detail: keranjang multi-barang, harga retail/grosir/khusus, preview dan cetak nota thermal 58 mm
+- Master salesman: tambah, edit, cari, arsip, dan aktifkan kembali nama salesman
+- Penjualan master-detail: status Retail/Grosir pada header transaksi, harga detail dapat disesuaikan, preview dan cetak nota thermal 58 mm
+- Kulakan master-detail berdasarkan salesman dan master barang; total langsung mengurangi kas
 - Pengeluaran: tambah, lihat, batalkan dengan jejak audit, filter tanggal
 - Kasbon: tambah, bayar bertahap, batalkan dengan jejak audit, lihat status + progress bar
 - Dashboard ringkasan hari ini (quick stats)
@@ -119,6 +121,8 @@ Database akan ter-inisialisasi otomatis saat build via `vercel-build` script. Ji
 │   ├── auth.js         # Login/logout/me
 │   ├── setting.js      # Nama warung
 │   ├── barang.js       # Master barang + harga retail/grosir
+│   ├── salesman.js     # Master nama salesman
+│   ├── kulakan.js      # Kulakan master-detail
 │   ├── penjualan.js    # Penjualan master-detail + nota
 │   ├── pemasukan.js    # Kompatibilitas transaksi lama
 │   ├── pengeluaran.js  # CRUD pengeluaran

@@ -45,18 +45,13 @@
 
   function applySelectedPrice() {
     const product = selectedProduct();
-    const wholesaleOption = jenisHargaSelect.querySelector('option[value="grosir"]');
-    const hasWholesale = Boolean(product?.harga_grosir);
-    wholesaleOption.disabled = !hasWholesale;
-
     if (!product) {
-      jenisHargaSelect.value = 'retail';
       hargaInput.value = '';
       updateSubtotal();
       return;
     }
-    if (!hasWholesale && jenisHargaSelect.value === 'grosir') jenisHargaSelect.value = 'retail';
-    hargaInput.value = jenisHargaSelect.value === 'grosir'
+
+    hargaInput.value = jenisHargaSelect.value === 'grosir' && product.harga_grosir
       ? product.harga_grosir
       : product.harga_retail;
     updateSubtotal();
@@ -100,7 +95,7 @@
             <div class="main">${KasirApp.escapeHtml(item.nama)} × ${item.quantity}</div>
             <strong>${KasirApp.formatRupiah(item.subtotal)}</strong>
           </div>
-          <div class="meta">${KasirApp.escapeHtml(item.label_harga)} · @${KasirApp.formatRupiah(item.harga)}</div>
+          <div class="meta">@${KasirApp.formatRupiah(item.harga)}</div>
           <div class="actions">
             <button type="button" class="secondary btn-sm" data-remove="${index}">Hapus</button>
           </div>
@@ -119,6 +114,7 @@
     cartTotal.textContent = KasirApp.formatRupiah(getCartTotal());
     btnPreview.disabled = cart.length === 0;
     btnSave.disabled = cart.length === 0;
+    jenisHargaSelect.disabled = cart.length > 0;
   }
 
   function receiptHtml(sale) {
@@ -137,6 +133,7 @@
         <div class="receipt-meta">
           <div>${KasirApp.escapeHtml(sale.nomor_nota || 'PREVIEW')}</div>
           <div>${KasirApp.escapeHtml(sale.tanggal || new Date().toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' }))}</div>
+          <div>Jenis: ${sale.jenis_harga === 'grosir' ? 'Grosir' : 'Retail'}</div>
         </div>
         <div class="receipt-rule"></div>
         ${rows}
@@ -178,6 +175,7 @@
     return {
       nomor_nota: 'PREVIEW',
       tanggal: new Date().toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' }),
+      jenis_harga: jenisHargaSelect.value,
       total: getCartTotal(),
       items: cart.map(item => ({ ...item, total: item.subtotal }))
     };
@@ -201,7 +199,7 @@
             <div class="main">${KasirApp.escapeHtml(sale.nomor_nota)}</div>
             <strong>${KasirApp.formatRupiah(sale.total)}</strong>
           </div>
-          <div class="meta">${sale.jumlah_item} item · ${KasirApp.escapeHtml(sale.tanggal)}</div>
+          <div class="meta">${sale.jenis_harga === 'grosir' ? 'Grosir' : 'Retail'} · ${sale.jumlah_item} item · ${KasirApp.escapeHtml(sale.tanggal)}</div>
           <div class="actions">
             <button class="primary btn-sm" data-receipt="${sale.id}" data-legacy="${sale.legacy}">Nota</button>
             <button class="secondary btn-sm" data-void="${sale.id}" data-legacy="${sale.legacy}">Batalkan</button>
@@ -262,12 +260,7 @@
       return;
     }
 
-    const defaultPrice = jenisHargaSelect.value === 'grosir' ? product.harga_grosir : product.harga_retail;
-    const priceType = price === defaultPrice ? jenisHargaSelect.value : 'khusus';
-    const priceLabel = priceType === 'grosir' ? 'Grosir' : priceType === 'retail' ? 'Retail' : 'Harga khusus';
-    const existing = cart.find(item =>
-      item.barang_id === product.id && item.harga === price && item.jenis_harga === priceType
-    );
+    const existing = cart.find(item => item.barang_id === product.id && item.harga === price);
     if (existing) {
       existing.quantity += quantity;
       existing.subtotal = existing.quantity * existing.harga;
@@ -278,8 +271,6 @@
         nama: product.nama,
         quantity,
         harga: price,
-        jenis_harga: priceType,
-        label_harga: priceLabel,
         subtotal: quantity * price
       });
     }
@@ -289,10 +280,7 @@
     updateSubtotal();
   });
 
-  barangSelect.addEventListener('change', () => {
-    jenisHargaSelect.value = 'retail';
-    applySelectedPrice();
-  });
+  barangSelect.addEventListener('change', applySelectedPrice);
   jenisHargaSelect.addEventListener('change', applySelectedPrice);
   quantityInput.addEventListener('input', updateSubtotal);
   hargaInput.addEventListener('input', updateSubtotal);
@@ -302,11 +290,11 @@
     if (cart.length === 0) return;
     errorEl.textContent = '';
     const data = {
+      jenis_harga: jenisHargaSelect.value,
       items: cart.map(item => ({
         barang_id: item.barang_id,
         quantity: item.quantity,
-        harga: item.harga,
-        jenis_harga: item.jenis_harga
+        harga: item.harga
       }))
     };
     const confirmed = await KasirApp.confirmDialog('Simpan Penjualan', 'Simpan semua barang dalam satu transaksi?');

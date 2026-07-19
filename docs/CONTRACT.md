@@ -100,6 +100,40 @@ Endpoint:
 
 UI penjualan menyediakan pilihan eksplisit `Retail` atau `Grosir` jika barang memiliki harga grosir. Harga satuan tetap dapat disesuaikan sebagai harga khusus sebelum transaksi disimpan.
 
+### Master Salesman
+
+Field bisnis hanya `nama`. Nama unik tanpa membedakan kapital dan spasi ganda, maksimal 100 karakter. Metadata status/tanggal dikelola sistem agar data dapat diarsipkan tanpa hard delete.
+
+| Method | Endpoint | Keterangan |
+|---|---|---|
+| GET | `/api/salesman?status=aktif&q=` | Daftar atau pencarian salesman |
+| POST | `/api/salesman` | Tambah `{ "nama": "Budi" }` |
+| PUT | `/api/salesman/:id` | Ubah nama salesman |
+| DELETE | `/api/salesman/:id` | Arsipkan salesman |
+| POST | `/api/salesman/:id/aktifkan` | Aktifkan kembali salesman |
+
+### Kulakan
+
+Kulakan memakai model master-detail berdasarkan salesman. Satu header memilih satu salesman aktif dan memiliki satu atau lebih detail master barang. Harga beli disimpan sebagai snapshot dan tidak mengubah harga retail/grosir master barang.
+
+```json
+{
+  "salesman_id": 1,
+  "items": [
+    { "barang_id": 2, "quantity": 10, "harga_beli": 12000 }
+  ]
+}
+```
+
+| Method | Endpoint | Keterangan |
+|---|---|---|
+| GET | `/api/kulakan?dari=&sampai=` | Daftar header kulakan aktif |
+| POST | `/api/kulakan` | Simpan header/detail secara atomik |
+| GET | `/api/kulakan/:id` | Detail kulakan |
+| DELETE | `/api/kulakan/:id` | Batalkan dampak kas tanpa menghapus audit |
+
+Nomor kulakan dibuat otomatis dengan format `KL-YYYYMMDD-ID`. Kulakan dianggap dibayar langsung dan mengurangi kas pada tanggal transaksi. Pembatalan menghapus dampaknya dari kas. Fitur ini tidak mengubah stok karena aplikasi belum memiliki pencatatan inventory.
+
 ### Penjualan
 
 Penjualan memakai model master-detail: satu header transaksi memiliki satu atau lebih detail barang. Tidak ada field pelanggan, uang diterima, kembalian, maupun nama toko pada nota.
@@ -110,14 +144,15 @@ Header opsional `Idempotency-Key` didukung.
 
 ```json
 {
+  "jenis_harga": "grosir",
   "items": [
-    { "barang_id": 1, "quantity": 2, "harga": 15000, "jenis_harga": "retail" },
-    { "barang_id": 2, "quantity": 1, "harga": 12000, "jenis_harga": "grosir" }
+    { "barang_id": 1, "quantity": 2, "harga": 15000 },
+    { "barang_id": 2, "quantity": 1, "harga": 12000 }
   ]
 }
 ```
 
-`jenis_harga`: `retail` | `grosir` | `khusus`. Server mengambil nama barang aktif dari master, lalu menyimpan nama, harga, quantity, jenis harga, dan subtotal sebagai snapshot detail. Nomor nota dibuat otomatis dengan format `PJ-YYYYMMDD-ID`.
+`jenis_harga` (`retail` | `grosir`) berada pada header penjualan dan berlaku untuk seluruh detail berdasarkan `penjualan_id`. Harga per barang tetap dapat disesuaikan. Saat header Grosir dipilih, UI memakai harga grosir master jika tersedia dan fallback ke harga retail jika tidak tersedia. Server mengambil nama barang aktif dari master lalu menyimpan nama, harga, quantity, dan subtotal sebagai snapshot detail. Nomor nota dibuat otomatis dengan format `PJ-YYYYMMDD-ID`.
 
 #### GET `/api/penjualan?dari=&sampai=`
 
@@ -312,7 +347,8 @@ Ringkasan kas harian menggunakan rumus:
 
 ```text
 total_kas_masuk = pemasukan_penjualan + pembayaran_kasbon
-sisa_kas = total_kas_masuk - pengeluaran
+total_kas_keluar = pengeluaran + kulakan
+sisa_kas = total_kas_masuk - total_kas_keluar
 ```
 
 Field utama:
@@ -322,7 +358,9 @@ Field utama:
 | `pemasukan_penjualan` | Total penjualan tunai hari ini |
 | `pembayaran_kasbon` | Total pembayaran kasbon yang diterima hari ini |
 | `total_kas_masuk` | Penjualan tunai + pembayaran kasbon |
-| `pengeluaran` | Total pengeluaran hari ini |
+| `pengeluaran` | Total biaya operasional hari ini |
+| `kulakan` | Total pembelian barang dari salesman hari ini |
+| `total_kas_keluar` | Pengeluaran operasional + kulakan |
 | `sisa_kas` | Total kas masuk dikurangi pengeluaran |
 | `kasbon_outstanding` | Total sisa seluruh kasbon aktif |
 | `kasbon_aktif` | Jumlah record kasbon yang belum lunas |
@@ -355,7 +393,7 @@ Menghasilkan JSON dari satu consistent read transaction. Metadata backup:
 | `counts` | Jumlah record setiap tabel |
 | `checksum_sha256` | Checksum bagian data backup |
 
-Backup mencakup master barang, header/detail penjualan, transaksi aktif, dan transaksi yang dibatalkan. Restore tidak disediakan sebagai endpoint HTTP; jalankan dari lingkungan tepercaya:
+Backup mencakup master barang, master salesman, header/detail penjualan dan kulakan, transaksi aktif, dan transaksi yang dibatalkan. Restore tidak disediakan sebagai endpoint HTTP; jalankan dari lingkungan tepercaya:
 
 ```bash
 RESTORE_CONFIRM=RESTORE_KASIR_MINI npm run db:restore -- path/backup.json

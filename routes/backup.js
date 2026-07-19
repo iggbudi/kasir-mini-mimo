@@ -16,7 +16,10 @@ router.get('/', async (_req, res) => {
       'SELECT * FROM kasbon_bayar ORDER BY id',
       'SELECT * FROM setting ORDER BY key',
       'SELECT * FROM master_barang ORDER BY id',
-      'SELECT * FROM penjualan ORDER BY id'
+      'SELECT * FROM penjualan ORDER BY id',
+      'SELECT * FROM master_salesman ORDER BY id',
+      'SELECT * FROM kulakan ORDER BY id',
+      'SELECT * FROM kulakan_item ORDER BY id'
     ], 'read');
 
     const schemaVersion = Number(results[0].rows[0]?.version || 0);
@@ -28,6 +31,9 @@ router.get('/', async (_req, res) => {
     const settings = toPlainRows(results[5]);
     const masterBarang = toPlainRows(results[6]);
     const penjualan = toPlainRows(results[7]);
+    const masterSalesman = toPlainRows(results[8]);
+    const kulakan = toPlainRows(results[9]);
+    const kulakanItem = toPlainRows(results[10]);
     const data = {
       pemasukan,
       pengeluaran,
@@ -35,7 +41,10 @@ router.get('/', async (_req, res) => {
       kasbon_bayar: kasbonBayar,
       setting: settings,
       master_barang: masterBarang,
-      penjualan
+      penjualan,
+      master_salesman: masterSalesman,
+      kulakan,
+      kulakan_item: kulakanItem
     };
     const checksum = crypto.createHash('sha256').update(JSON.stringify(data)).digest('hex');
 
@@ -51,7 +60,10 @@ router.get('/', async (_req, res) => {
         kasbon_bayar: kasbonBayar.length,
         setting: settings.length,
         master_barang: masterBarang.length,
-        penjualan: penjualan.length
+        penjualan: penjualan.length,
+        master_salesman: masterSalesman.length,
+        kulakan: kulakan.length,
+        kulakan_item: kulakanItem.length
       },
       checksum_sha256: checksum,
       ...data

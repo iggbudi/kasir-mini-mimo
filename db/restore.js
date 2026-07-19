@@ -9,7 +9,9 @@ const { getSchemaVersion } = require('./migrations');
 const CONFIRM_VALUE = 'RESTORE_KASIR_MINI';
 const LEGACY_DATA_KEYS = ['pemasukan', 'pengeluaran', 'kasbon', 'kasbon_bayar', 'setting'];
 const V3_DATA_KEYS = [...LEGACY_DATA_KEYS, 'master_barang'];
-const DATA_KEYS = [...V3_DATA_KEYS, 'penjualan'];
+const V4_DATA_KEYS = [...V3_DATA_KEYS, 'penjualan'];
+const V5_DATA_KEYS = [...V4_DATA_KEYS, 'master_salesman'];
+const DATA_KEYS = [...V5_DATA_KEYS, 'kulakan', 'kulakan_item'];
 const nullable = value => value ?? null;
 
 function readBackup(filename) {
@@ -20,11 +22,15 @@ function readBackup(filename) {
     throw new Error('Format backup tidak dikenali');
   }
   const backupVersion = Number(backup.schema_version);
-  const checksumKeys = backupVersion >= 4
+  const checksumKeys = backupVersion >= 6
     ? DATA_KEYS
-    : backupVersion >= 3
-      ? V3_DATA_KEYS
-      : LEGACY_DATA_KEYS;
+    : backupVersion >= 5
+      ? V5_DATA_KEYS
+      : backupVersion >= 4
+        ? V4_DATA_KEYS
+        : backupVersion >= 3
+          ? V3_DATA_KEYS
+          : LEGACY_DATA_KEYS;
   for (const key of checksumKeys) {
     if (!Array.isArray(backup[key])) throw new Error(`Data backup ${key} tidak valid`);
     if (Number(backup.counts?.[key]) !== backup[key].length) {
@@ -38,6 +44,9 @@ function readBackup(filename) {
 
   if (!Array.isArray(backup.master_barang)) backup.master_barang = [];
   if (!Array.isArray(backup.penjualan)) backup.penjualan = [];
+  if (!Array.isArray(backup.master_salesman)) backup.master_salesman = [];
+  if (!Array.isArray(backup.kulakan)) backup.kulakan = [];
+  if (!Array.isArray(backup.kulakan_item)) backup.kulakan_item = [];
   return backup;
 }
 
@@ -49,14 +58,31 @@ async function restoreBackup(backup) {
   }
 
   const statements = [
+    'DELETE FROM kulakan_item',
+    'DELETE FROM kulakan',
     'DELETE FROM kasbon_bayar',
     'DELETE FROM kasbon',
     'DELETE FROM pemasukan',
     'DELETE FROM penjualan',
     'DELETE FROM pengeluaran',
     'DELETE FROM master_barang',
+    'DELETE FROM master_salesman',
     'DELETE FROM setting'
   ];
+
+  for (const row of backup.master_salesman) {
+    statements.push({
+      sql: `
+        INSERT INTO master_salesman
+          (id, nama, nama_normalized, aktif, created_at, updated_at, archived_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+      `,
+      args: [
+        row.id, row.nama, row.nama_normalized, row.aktif,
+        row.created_at, row.updated_at, nullable(row.archived_at)
+      ]
+    });
+  }
 
   for (const row of backup.master_barang) {
     statements.push({
@@ -74,15 +100,45 @@ async function restoreBackup(backup) {
     });
   }
 
+  for (const row of backup.kulakan) {
+    statements.push({
+      sql: `
+        INSERT INTO kulakan
+          (id, nomor_kulakan, salesman_id, salesman_nama, total, tanggal,
+           request_id, payload_hash, voided_at, void_reason)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `,
+      args: [
+        row.id, row.nomor_kulakan, nullable(row.salesman_id), row.salesman_nama,
+        row.total, row.tanggal, nullable(row.request_id), nullable(row.payload_hash),
+        nullable(row.voided_at), nullable(row.void_reason)
+      ]
+    });
+  }
+
+  for (const row of backup.kulakan_item) {
+    statements.push({
+      sql: `
+        INSERT INTO kulakan_item
+          (id, kulakan_id, barang_id, barang_nama, quantity, harga_beli)
+        VALUES (?, ?, ?, ?, ?, ?)
+      `,
+      args: [
+        row.id, row.kulakan_id, nullable(row.barang_id), row.barang_nama,
+        row.quantity, row.harga_beli
+      ]
+    });
+  }
+
   for (const row of backup.penjualan) {
     statements.push({
       sql: `
         INSERT INTO penjualan
-          (id, nomor_nota, total, tanggal, request_id, payload_hash, voided_at, void_reason)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+          (id, nomor_nota, jenis_harga, total, tanggal, request_id, payload_hash, voided_at, void_reason)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
       `,
       args: [
-        row.id, row.nomor_nota, row.total, row.tanggal,
+        row.id, row.nomor_nota, row.jenis_harga || 'retail', row.total, row.tanggal,
         nullable(row.request_id), nullable(row.payload_hash),
         nullable(row.voided_at), nullable(row.void_reason)
       ]
