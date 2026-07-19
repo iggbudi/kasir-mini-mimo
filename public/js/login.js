@@ -8,6 +8,9 @@
   const togglePassword = document.querySelector('#togglePassword');
   const passwordInput = document.querySelector('#password');
   const usernameInput = document.querySelector('#username');
+  const loginDialog = document.querySelector('#loginDialog');
+  const openLoginButtons = document.querySelectorAll('[data-open-login]');
+  const closeLoginButton = document.querySelector('[data-close-login]');
   const ORIGINAL_LABEL = submitLabel.textContent;
 
   function setLoading(loading) {
@@ -56,6 +59,27 @@
     }
   }
 
+  function openLogin() {
+    if (typeof loginDialog.showModal === 'function') {
+      loginDialog.showModal();
+      requestAnimationFrame(() => usernameInput.focus());
+    }
+  }
+
+  function closeLogin() {
+    if (!submitButton.disabled && loginDialog.open) {
+      loginDialog.close();
+      clearForm();
+    }
+  }
+
+  openLoginButtons.forEach((button) => button.addEventListener('click', openLogin));
+  closeLoginButton.addEventListener('click', closeLogin);
+
+  loginDialog.addEventListener('click', (event) => {
+    if (event.target === loginDialog) closeLogin();
+  });
+
   togglePassword.addEventListener('mousedown', (event) => {
     event.preventDefault();
   });
@@ -65,11 +89,12 @@
     togglePasswordVisibility();
   });
 
-  document.addEventListener('keydown', (event) => {
-    if (event.key === 'Escape' && !submitButton.disabled) {
+  loginDialog.addEventListener('cancel', (event) => {
+    if (submitButton.disabled) {
       event.preventDefault();
-      clearForm();
+      return;
     }
+    clearForm();
   });
 
   form.addEventListener('input', () => {
@@ -116,7 +141,7 @@
       await window.KasirApp.checkAuth();
       location.replace('/');
     } catch (_error) {
-      usernameInput.focus();
+      // Pengunjung yang belum login tetap berada di landing page.
     }
   })();
 })();
