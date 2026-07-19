@@ -1,31 +1,36 @@
 (function () {
   'use strict';
 
-  const form = document.getElementById('formPemasukan');
-  const listEl = document.getElementById('list');
-  const totalEl = document.getElementById('total');
-  const errorEl = document.getElementById('error');
-  const previewEl = document.getElementById('previewTotal');
-  const btnSubmit = document.getElementById('btnSubmit');
+  const KasirApp = window.KasirApp;
+  const formItem = document.getElementById('formItem');
   const barangSelect = document.getElementById('barangId');
   const jenisHargaSelect = document.getElementById('jenisHarga');
+  const quantityInput = document.getElementById('quantity');
+  const hargaInput = document.getElementById('harga');
+  const subtotalEl = document.getElementById('previewSubtotal');
+  const cartList = document.getElementById('cartList');
+  const cartTotal = document.getElementById('cartTotal');
+  const cartCount = document.getElementById('cartCount');
+  const errorEl = document.getElementById('error');
+  const btnPreview = document.getElementById('btnPreview');
+  const btnSave = document.getElementById('btnSave');
+  const listEl = document.getElementById('list');
+  const totalEl = document.getElementById('total');
   const filterBar = document.getElementById('filterBar');
   const customDateRange = document.getElementById('customDateRange');
-  const btnFilterDate = document.getElementById('btnFilterDate');
   const dateDari = document.getElementById('dateDari');
   const dateSampai = document.getElementById('dateSampai');
+  const receiptPrint = document.getElementById('receiptPrint');
 
-  const KasirApp = window.KasirApp;
-
+  let masterBarang = [];
+  let cart = [];
   let currentFilter = 'today';
   let currentDateDari = '';
   let currentDateSampai = '';
-  let masterBarang = [];
 
   function getDateParams() {
     const today = KasirApp.getTodayStr();
     const yesterday = KasirApp.getYesterdayStr();
-
     if (currentFilter === 'today') return `dari=${today}&sampai=${today}`;
     if (currentFilter === 'yesterday') return `dari=${yesterday}&sampai=${yesterday}`;
     if (currentFilter === 'custom' && currentDateDari) {
@@ -34,91 +39,36 @@
     return `dari=${today}&sampai=${today}`;
   }
 
-  async function loadData() {
-    KasirApp.showLoading(listEl);
-
-    try {
-      const res = await KasirApp.apiFetch(`/api/pemasukan?${getDateParams()}`);
-      const items = res.data || [];
-
-      if (items.length === 0) {
-        KasirApp.showEmpty(listEl, '📈', 'Belum ada pemasukan untuk periode ini.');
-      } else {
-        listEl.innerHTML = items.map((item, i) => `
-          <div class="list-item" data-type="income" style="animation-delay:${i * 30}ms">
-            <div class="item-top">
-              <div class="main">${KasirApp.escapeHtml(item.barang)} × ${item.quantity}</div>
-              <div class="amount">${KasirApp.formatRupiah(item.total)}</div>
-            </div>
-            <div class="meta">@${KasirApp.formatRupiah(item.harga)}</div>
-            ${item.catatan ? `<div class="meta small">${KasirApp.escapeHtml(item.catatan)}</div>` : ''}
-            <div class="actions">
-              <button class="secondary btn-sm" data-id="${item.id}">Batalkan</button>
-            </div>
-          </div>
-        `).join('');
-      }
-
-      const total = items.reduce((sum, i) => sum + (i.total || 0), 0);
-      totalEl.textContent = KasirApp.formatRupiah(total);
-
-      listEl.querySelectorAll('button[data-id]').forEach(btn => {
-        btn.addEventListener('click', async () => {
-          const id = btn.dataset.id;
-          const reason = await KasirApp.promptText(
-            'Batalkan Pemasukan',
-            'Data tetap disimpan di riwayat audit dan tidak lagi dihitung dalam kas.'
-          );
-          if (!reason) return;
-
-          btn.disabled = true;
-          try {
-            await KasirApp.apiFetch(`/api/pemasukan/${id}`, {
-              method: 'DELETE',
-              body: JSON.stringify({ reason })
-            });
-            KasirApp.showToast('Pemasukan dibatalkan');
-            loadData();
-          } catch (e) {
-            btn.disabled = false;
-            KasirApp.showToast(e.message || 'Gagal membatalkan', 'error');
-          }
-        });
-      });
-    } catch (e) {
-      KasirApp.showError(listEl, e.message);
-    }
+  function selectedProduct() {
+    return masterBarang.find(item => String(item.id) === barangSelect.value) || null;
   }
 
-  // Filter bar
-  filterBar.addEventListener('click', (e) => {
-    const btn = e.target.closest('.btn-filter');
-    if (!btn) return;
+  function applySelectedPrice() {
+    const product = selectedProduct();
+    const wholesaleOption = jenisHargaSelect.querySelector('option[value="grosir"]');
+    const hasWholesale = Boolean(product?.harga_grosir);
+    wholesaleOption.disabled = !hasWholesale;
 
-    filterBar.querySelectorAll('.btn-filter').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-
-    currentFilter = btn.dataset.filter;
-
-    if (currentFilter === 'custom') {
-      customDateRange.classList.remove('hidden');
-      customDateRange.style.display = 'flex';
-    } else {
-      customDateRange.classList.add('hidden');
-      customDateRange.style.display = 'none';
-      loadData();
-    }
-  });
-
-  btnFilterDate.addEventListener('click', () => {
-    currentDateDari = dateDari.value;
-    currentDateSampai = dateSampai.value;
-    if (!currentDateDari) {
-      KasirApp.showToast('Pilih tanggal dulu', 'error');
+    if (!product) {
+      jenisHargaSelect.value = 'retail';
+      hargaInput.value = '';
+      updateSubtotal();
       return;
     }
-    loadData();
-  });
+    if (!hasWholesale && jenisHargaSelect.value === 'grosir') jenisHargaSelect.value = 'retail';
+    hargaInput.value = jenisHargaSelect.value === 'grosir'
+      ? product.harga_grosir
+      : product.harga_retail;
+    updateSubtotal();
+  }
+
+  function updateSubtotal() {
+    const quantity = parseInt(quantityInput.value, 10) || 0;
+    const price = parseInt(hargaInput.value, 10) || 0;
+    subtotalEl.textContent = quantity > 0 && price > 0
+      ? `Subtotal: ${KasirApp.formatRupiah(quantity * price)}`
+      : '';
+  }
 
   async function loadMasterBarang() {
     try {
@@ -127,7 +77,6 @@
       barangSelect.innerHTML = '<option value="">Pilih barang</option>' + masterBarang.map(item => `
         <option value="${item.id}">${KasirApp.escapeHtml(item.nama)}</option>
       `).join('');
-
       if (masterBarang.length === 0) {
         barangSelect.innerHTML = '<option value="">Belum ada master barang</option>';
       }
@@ -137,89 +86,281 @@
     }
   }
 
-  function applySelectedPrice() {
-    const selected = masterBarang.find(item => String(item.id) === barangSelect.value);
-    const wholesaleOption = jenisHargaSelect.querySelector('option[value="grosir"]');
-    const hasWholesale = Boolean(selected?.harga_grosir);
-    wholesaleOption.disabled = !hasWholesale;
+  function getCartTotal() {
+    return cart.reduce((sum, item) => sum + item.subtotal, 0);
+  }
 
-    if (!selected) {
-      jenisHargaSelect.value = 'retail';
-      document.getElementById('harga').value = '';
+  function renderCart() {
+    if (cart.length === 0) {
+      KasirApp.showEmpty(cartList, '🛒', 'Belum ada barang dalam penjualan.');
+    } else {
+      cartList.innerHTML = cart.map((item, index) => `
+        <div class="list-item">
+          <div class="item-top">
+            <div class="main">${KasirApp.escapeHtml(item.nama)} × ${item.quantity}</div>
+            <strong>${KasirApp.formatRupiah(item.subtotal)}</strong>
+          </div>
+          <div class="meta">${KasirApp.escapeHtml(item.label_harga)} · @${KasirApp.formatRupiah(item.harga)}</div>
+          <div class="actions">
+            <button type="button" class="secondary btn-sm" data-remove="${index}">Hapus</button>
+          </div>
+        </div>
+      `).join('');
+      cartList.querySelectorAll('[data-remove]').forEach(button => {
+        button.addEventListener('click', () => {
+          cart.splice(Number(button.dataset.remove), 1);
+          renderCart();
+        });
+      });
+    }
+
+    const totalQuantity = cart.reduce((sum, item) => sum + item.quantity, 0);
+    cartCount.textContent = `${totalQuantity} barang`;
+    cartTotal.textContent = KasirApp.formatRupiah(getCartTotal());
+    btnPreview.disabled = cart.length === 0;
+    btnSave.disabled = cart.length === 0;
+  }
+
+  function receiptHtml(sale) {
+    const rows = sale.items.map(item => `
+      <div class="receipt-item">
+        <div>${KasirApp.escapeHtml(item.barang)} × ${item.quantity}</div>
+        <div class="receipt-item__price">
+          <span>@${KasirApp.formatRupiah(item.harga)}</span>
+          <strong>${KasirApp.formatRupiah(item.total ?? item.quantity * item.harga)}</strong>
+        </div>
+      </div>
+    `).join('');
+
+    return `
+      <article class="receipt-paper">
+        <div class="receipt-meta">
+          <div>${KasirApp.escapeHtml(sale.nomor_nota || 'PREVIEW')}</div>
+          <div>${KasirApp.escapeHtml(sale.tanggal || new Date().toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' }))}</div>
+        </div>
+        <div class="receipt-rule"></div>
+        ${rows}
+        <div class="receipt-rule"></div>
+        <div class="receipt-total"><span>TOTAL</span><strong>${KasirApp.formatRupiah(sale.total)}</strong></div>
+      </article>
+    `;
+  }
+
+  function printReceipt(sale) {
+    receiptPrint.innerHTML = receiptHtml(sale);
+    document.body.classList.add('printing-receipt');
+    window.print();
+    setTimeout(() => document.body.classList.remove('printing-receipt'), 500);
+  }
+
+  function showReceipt(sale, canPrint) {
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+    overlay.innerHTML = `
+      <div class="modal receipt-modal">
+        <h3 class="modal-title">Preview Nota</h3>
+        ${receiptHtml(sale)}
+        <div class="modal-actions mt-3">
+          <button class="secondary" data-action="close">Tutup</button>
+          ${canPrint ? '<button class="primary" data-action="print">Cetak Nota</button>' : ''}
+        </div>
+      </div>
+    `;
+    overlay.querySelector('[data-action="close"]').addEventListener('click', () => overlay.remove());
+    overlay.querySelector('[data-action="print"]')?.addEventListener('click', () => printReceipt(sale));
+    overlay.addEventListener('click', event => {
+      if (event.target === overlay) overlay.remove();
+    });
+    document.body.appendChild(overlay);
+  }
+
+  function cartAsSale() {
+    return {
+      nomor_nota: 'PREVIEW',
+      tanggal: new Date().toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' }),
+      total: getCartTotal(),
+      items: cart.map(item => ({ ...item, total: item.subtotal }))
+    };
+  }
+
+  async function loadSales() {
+    KasirApp.showLoading(listEl);
+    try {
+      const response = await KasirApp.apiFetch(`/api/penjualan?${getDateParams()}`);
+      const sales = response.data || [];
+      totalEl.textContent = KasirApp.formatRupiah(sales.reduce((sum, sale) => sum + sale.total, 0));
+
+      if (sales.length === 0) {
+        KasirApp.showEmpty(listEl, '🧾', 'Belum ada penjualan untuk periode ini.');
+        return;
+      }
+
+      listEl.innerHTML = sales.map(sale => `
+        <div class="list-item">
+          <div class="item-top">
+            <div class="main">${KasirApp.escapeHtml(sale.nomor_nota)}</div>
+            <strong>${KasirApp.formatRupiah(sale.total)}</strong>
+          </div>
+          <div class="meta">${sale.jumlah_item} item · ${KasirApp.escapeHtml(sale.tanggal)}</div>
+          <div class="actions">
+            <button class="primary btn-sm" data-receipt="${sale.id}" data-legacy="${sale.legacy}">Nota</button>
+            <button class="secondary btn-sm" data-void="${sale.id}" data-legacy="${sale.legacy}">Batalkan</button>
+          </div>
+        </div>
+      `).join('');
+
+      listEl.querySelectorAll('[data-receipt]').forEach(button => {
+        button.addEventListener('click', async () => {
+          button.disabled = true;
+          try {
+            const query = button.dataset.legacy === '1' ? '?legacy=1' : '';
+            const response = await KasirApp.apiFetch(`/api/penjualan/${button.dataset.receipt}${query}`);
+            showReceipt(response.data, true);
+          } catch (err) {
+            KasirApp.showToast(err.message || 'Gagal memuat nota', 'error');
+          } finally {
+            button.disabled = false;
+          }
+        });
+      });
+
+      listEl.querySelectorAll('[data-void]').forEach(button => {
+        button.addEventListener('click', async () => {
+          const reason = await KasirApp.promptText(
+            'Batalkan Penjualan',
+            'Penjualan tetap disimpan di riwayat audit dan tidak lagi dihitung dalam kas.'
+          );
+          if (!reason) return;
+          button.disabled = true;
+          try {
+            const query = button.dataset.legacy === '1' ? '?legacy=1' : '';
+            await KasirApp.apiFetch(`/api/penjualan/${button.dataset.void}${query}`, {
+              method: 'DELETE',
+              body: JSON.stringify({ reason })
+            });
+            KasirApp.showToast('Penjualan dibatalkan');
+            loadSales();
+          } catch (err) {
+            button.disabled = false;
+            KasirApp.showToast(err.message || 'Gagal membatalkan', 'error');
+          }
+        });
+      });
+    } catch (err) {
+      KasirApp.showError(listEl, err.message || 'Gagal memuat penjualan');
+    }
+  }
+
+  formItem.addEventListener('submit', event => {
+    event.preventDefault();
+    errorEl.textContent = '';
+    const product = selectedProduct();
+    const quantity = parseInt(quantityInput.value, 10) || 0;
+    const price = parseInt(hargaInput.value, 10) || 0;
+    if (!product || quantity < 1 || price < 1) {
+      errorEl.textContent = 'Pilih barang, quantity, dan harga yang valid';
       return;
     }
-    if (!hasWholesale && jenisHargaSelect.value === 'grosir') jenisHargaSelect.value = 'retail';
 
-    document.getElementById('harga').value = jenisHargaSelect.value === 'grosir'
-      ? selected.harga_grosir
-      : selected.harga_retail;
-  }
-
-  // Preview total
-  function updatePreview() {
-    const qty = parseInt(document.getElementById('quantity').value, 10) || 0;
-    const harga = parseInt(document.getElementById('harga').value, 10) || 0;
-    if (qty > 0 && harga > 0) {
-      previewEl.textContent = `Total: ${KasirApp.formatRupiah(qty * harga)}`;
+    const defaultPrice = jenisHargaSelect.value === 'grosir' ? product.harga_grosir : product.harga_retail;
+    const priceType = price === defaultPrice ? jenisHargaSelect.value : 'khusus';
+    const priceLabel = priceType === 'grosir' ? 'Grosir' : priceType === 'retail' ? 'Retail' : 'Harga khusus';
+    const existing = cart.find(item =>
+      item.barang_id === product.id && item.harga === price && item.jenis_harga === priceType
+    );
+    if (existing) {
+      existing.quantity += quantity;
+      existing.subtotal = existing.quantity * existing.harga;
     } else {
-      previewEl.textContent = '';
+      cart.push({
+        barang_id: product.id,
+        barang: product.nama,
+        nama: product.nama,
+        quantity,
+        harga: price,
+        jenis_harga: priceType,
+        label_harga: priceLabel,
+        subtotal: quantity * price
+      });
     }
-  }
+
+    quantityInput.value = '1';
+    renderCart();
+    updateSubtotal();
+  });
 
   barangSelect.addEventListener('change', () => {
     jenisHargaSelect.value = 'retail';
     applySelectedPrice();
-    updatePreview();
   });
-  jenisHargaSelect.addEventListener('change', () => {
-    applySelectedPrice();
-    updatePreview();
-  });
-  document.getElementById('quantity').addEventListener('input', updatePreview);
-  document.getElementById('harga').addEventListener('input', updatePreview);
+  jenisHargaSelect.addEventListener('change', applySelectedPrice);
+  quantityInput.addEventListener('input', updateSubtotal);
+  hargaInput.addEventListener('input', updateSubtotal);
 
-  // Form submit
-  form.addEventListener('submit', async (e) => {
-    e.preventDefault();
+  btnPreview.addEventListener('click', () => showReceipt(cartAsSale(), false));
+  btnSave.addEventListener('click', async () => {
+    if (cart.length === 0) return;
     errorEl.textContent = '';
-
-    const selected = masterBarang.find(item => String(item.id) === barangSelect.value);
     const data = {
-      barang_id: barangSelect.value,
-      barang: selected?.nama || '',
-      quantity: document.getElementById('quantity').value,
-      harga: document.getElementById('harga').value,
-      catatan: document.getElementById('catatan').value.trim() || null
+      items: cart.map(item => ({
+        barang_id: item.barang_id,
+        quantity: item.quantity,
+        harga: item.harga,
+        jenis_harga: item.jenis_harga
+      }))
     };
+    const confirmed = await KasirApp.confirmDialog('Simpan Penjualan', 'Simpan semua barang dalam satu transaksi?');
+    if (!confirmed) return;
 
-    const ok = await KasirApp.confirmDialog('Simpan Pemasukan', 'Pastikan data sudah benar. Simpan?');
-    if (!ok) return;
-
-    btnSubmit.disabled = true;
-    btnSubmit.setAttribute('data-loading', 'true');
-    const requestScope = 'pemasukan:create';
-    const requestId = KasirApp.getIdempotencyKey(requestScope, data);
-
+    const scope = 'penjualan:create';
+    const requestId = KasirApp.getIdempotencyKey(scope, data);
+    btnSave.disabled = true;
+    btnSave.setAttribute('data-loading', 'true');
     try {
-      await KasirApp.apiFetch('/api/pemasukan', {
+      const response = await KasirApp.apiFetch('/api/penjualan', {
         method: 'POST',
         headers: { 'Idempotency-Key': requestId },
         body: JSON.stringify(data)
       });
-      KasirApp.clearIdempotencyKey(requestScope, data);
-      KasirApp.showToast('Pemasukan berhasil disimpan');
-      form.reset();
-      jenisHargaSelect.querySelector('option[value="grosir"]').disabled = true;
-      previewEl.textContent = '';
-      loadData();
+      KasirApp.clearIdempotencyKey(scope, data);
+      const savedSale = response.data;
+      cart = [];
+      renderCart();
+      KasirApp.showToast('Penjualan berhasil disimpan');
+      showReceipt(savedSale, true);
+      loadSales();
     } catch (err) {
-      errorEl.textContent = err.message || 'Gagal menyimpan';
+      errorEl.textContent = err.message || 'Gagal menyimpan penjualan';
     } finally {
-      btnSubmit.disabled = false;
-      btnSubmit.removeAttribute('data-loading');
+      btnSave.removeAttribute('data-loading');
+      btnSave.disabled = cart.length === 0;
     }
   });
 
+  filterBar.addEventListener('click', event => {
+    const button = event.target.closest('.btn-filter');
+    if (!button) return;
+    filterBar.querySelectorAll('.btn-filter').forEach(item => item.classList.remove('active'));
+    button.classList.add('active');
+    currentFilter = button.dataset.filter;
+    if (currentFilter === 'custom') {
+      customDateRange.classList.remove('hidden');
+      customDateRange.style.display = 'flex';
+    } else {
+      customDateRange.classList.add('hidden');
+      customDateRange.style.display = 'none';
+      loadSales();
+    }
+  });
+
+  document.getElementById('btnFilterDate').addEventListener('click', () => {
+    currentDateDari = dateDari.value;
+    currentDateSampai = dateSampai.value;
+    if (!currentDateDari) return KasirApp.showToast('Pilih tanggal dulu', 'error');
+    loadSales();
+  });
+
+  renderCart();
   loadMasterBarang();
-  loadData();
+  loadSales();
 })();

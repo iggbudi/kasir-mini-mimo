@@ -8,7 +8,8 @@ const { getSchemaVersion } = require('./migrations');
 
 const CONFIRM_VALUE = 'RESTORE_KASIR_MINI';
 const LEGACY_DATA_KEYS = ['pemasukan', 'pengeluaran', 'kasbon', 'kasbon_bayar', 'setting'];
-const DATA_KEYS = [...LEGACY_DATA_KEYS, 'master_barang'];
+const V3_DATA_KEYS = [...LEGACY_DATA_KEYS, 'master_barang'];
+const DATA_KEYS = [...V3_DATA_KEYS, 'penjualan'];
 const nullable = value => value ?? null;
 
 function readBackup(filename) {
@@ -19,7 +20,11 @@ function readBackup(filename) {
     throw new Error('Format backup tidak dikenali');
   }
   const backupVersion = Number(backup.schema_version);
-  const checksumKeys = backupVersion >= 3 ? DATA_KEYS : LEGACY_DATA_KEYS;
+  const checksumKeys = backupVersion >= 4
+    ? DATA_KEYS
+    : backupVersion >= 3
+      ? V3_DATA_KEYS
+      : LEGACY_DATA_KEYS;
   for (const key of checksumKeys) {
     if (!Array.isArray(backup[key])) throw new Error(`Data backup ${key} tidak valid`);
     if (Number(backup.counts?.[key]) !== backup[key].length) {
@@ -32,6 +37,7 @@ function readBackup(filename) {
   if (checksum !== backup.checksum_sha256) throw new Error('Checksum backup tidak cocok');
 
   if (!Array.isArray(backup.master_barang)) backup.master_barang = [];
+  if (!Array.isArray(backup.penjualan)) backup.penjualan = [];
   return backup;
 }
 
@@ -46,6 +52,7 @@ async function restoreBackup(backup) {
     'DELETE FROM kasbon_bayar',
     'DELETE FROM kasbon',
     'DELETE FROM pemasukan',
+    'DELETE FROM penjualan',
     'DELETE FROM pengeluaran',
     'DELETE FROM master_barang',
     'DELETE FROM setting'
@@ -67,14 +74,35 @@ async function restoreBackup(backup) {
     });
   }
 
+  for (const row of backup.penjualan) {
+    statements.push({
+      sql: `
+        INSERT INTO penjualan
+          (id, nomor_nota, total, tanggal, request_id, payload_hash, voided_at, void_reason)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      `,
+      args: [
+        row.id, row.nomor_nota, row.total, row.tanggal,
+        nullable(row.request_id), nullable(row.payload_hash),
+        nullable(row.voided_at), nullable(row.void_reason)
+      ]
+    });
+  }
+
   for (const row of backup.pemasukan) {
     statements.push({
       sql: `
         INSERT INTO pemasukan
-          (id, barang_id, barang, quantity, harga, catatan, tanggal, request_id, voided_at, void_reason)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          (id, penjualan_id, barang_id, barang, quantity, harga, catatan, tanggal,
+           jenis_harga, request_id, voided_at, void_reason)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `,
-      args: [row.id, nullable(row.barang_id), row.barang, row.quantity, row.harga, nullable(row.catatan), row.tanggal, nullable(row.request_id), nullable(row.voided_at), nullable(row.void_reason)]
+      args: [
+        row.id, nullable(row.penjualan_id), nullable(row.barang_id), row.barang,
+        row.quantity, row.harga, nullable(row.catatan), row.tanggal,
+        nullable(row.jenis_harga), nullable(row.request_id),
+        nullable(row.voided_at), nullable(row.void_reason)
+      ]
     });
   }
 

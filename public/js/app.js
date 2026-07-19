@@ -278,7 +278,7 @@ function promptRupiah(title, message, maxAmount) {
 function renderBottomNav(activePage) {
   const pages = [
     { id: 'home', href: '/', icon: '🏠', label: 'Beranda' },
-    { id: 'pemasukan', href: '/pemasukan.html', icon: '📈', label: 'Masuk' },
+    { id: 'pemasukan', href: '/pemasukan.html', icon: '🧾', label: 'Jual' },
     { id: 'pengeluaran', href: '/pengeluaran.html', icon: '📉', label: 'Keluar' },
     { id: 'kasbon', href: '/kasbon.html', icon: '📒', label: 'Kasbon' },
     { id: 'atur', href: '/setting.html', icon: '⚙️', label: 'Atur' }

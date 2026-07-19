@@ -21,7 +21,7 @@ router.get('/', async (req, res) => {
     const range = requireDateRange(req.query.dari, req.query.sampai, getTodayWib());
     const sql = `
       SELECT ${PUBLIC_COLUMNS} FROM pemasukan
-      WHERE voided_at IS NULL AND date(tanggal) BETWEEN ? AND ?
+      WHERE penjualan_id IS NULL AND voided_at IS NULL AND date(tanggal) BETWEEN ? AND ?
       ORDER BY tanggal DESC
     `;
     const items = await getAll(sql, [range.dari, range.sampai]);
@@ -100,8 +100,9 @@ router.delete('/:id', async (req, res) => {
     const reason = optionalString(req.body?.reason, 'Alasan pembatalan') || 'Dibatalkan oleh admin';
     if (reason.length > 200) return fail(res, 400, 'Alasan pembatalan maksimal 200 karakter');
 
-    const existing = await getOne('SELECT id, voided_at FROM pemasukan WHERE id = ?', [id]);
+    const existing = await getOne('SELECT id, penjualan_id, voided_at FROM pemasukan WHERE id = ?', [id]);
     if (!existing) return fail(res, 404, 'ID tidak ditemukan');
+    if (existing.penjualan_id) return fail(res, 400, 'Batalkan melalui endpoint penjualan');
     if (existing.voided_at) return success(res, { voided: true, already_voided: true });
 
     await run(

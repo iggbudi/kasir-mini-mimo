@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Pemasukan — Kasir Mini</title>
+  <title>Penjualan — Kasir Mini</title>
   <link rel="stylesheet" href="/css/style.css">
   <link rel="manifest" href="/manifest.json">
 </head>
@@ -15,29 +15,21 @@
     </div>
 
     <nav class="nav-links">
-      <a href="/pemasukan.html" class="nav-link active">Pemasukan</a>
+      <a href="/pemasukan.html" class="nav-link active">Penjualan</a>
       <a href="/pengeluaran.html" class="nav-link">Pengeluaran</a>
       <a href="/kasbon.html" class="nav-link">Kasbon</a>
     </nav>
 
-    <h1 class="title">Pemasukan</h1>
+    <h1 class="title">Penjualan</h1>
 
     <section class="card">
-      <h3 class="section-title">Tambah Pemasukan</h3>
-      <form id="formPemasukan">
-        <div class="form-row">
-          <div>
-            <label for="barangId">Barang</label>
-            <select id="barangId" required>
-              <option value="">Memuat master barang...</option>
-            </select>
-            <p class="small muted mt-2"><a href="/barang.html">Kelola master barang</a></p>
-          </div>
-          <div style="max-width:90px;">
-            <label>Qty</label>
-            <input id="quantity" type="number" min="1" value="1" required>
-          </div>
-        </div>
+      <h3 class="section-title">Tambah Barang</h3>
+      <form id="formItem">
+        <label for="barangId">Barang</label>
+        <select id="barangId" required>
+          <option value="">Memuat master barang...</option>
+        </select>
+        <p class="small muted mt-2"><a href="/barang.html">Kelola master barang</a></p>
 
         <div class="form-row mt-2">
           <div style="max-width:130px;">
@@ -47,31 +39,46 @@
               <option value="grosir" disabled>Grosir</option>
             </select>
           </div>
-          <div>
-            <label>Harga Satuan (Rp)</label>
-            <input id="harga" type="number" min="1" required placeholder="15000">
+          <div style="max-width:90px;">
+            <label for="quantity">Qty</label>
+            <input id="quantity" type="number" min="1" value="1" required>
           </div>
           <div>
-            <label>Catatan (opsional)</label>
-            <input id="catatan" type="text" placeholder="Opsional">
+            <label for="harga">Harga Satuan</label>
+            <input id="harga" type="number" min="1" required placeholder="0">
           </div>
         </div>
 
-        <p class="small muted mt-2" id="previewTotal" style="min-height:18px;"></p>
-        <p class="form-error" id="error"></p>
+        <p class="small muted mt-2" id="previewSubtotal" style="min-height:18px;"></p>
+        <button type="submit" class="secondary mt-2">+ Tambah ke Penjualan</button>
+      </form>
+    </section>
 
-        <button type="submit" class="primary mt-2" id="btnSubmit">
-          <span class="btn-label">Simpan Pemasukan</span>
+    <section class="card mt-3">
+      <div class="item-top">
+        <h3 class="section-title" style="margin:0;">Detail Penjualan</h3>
+        <strong id="cartCount">0 barang</strong>
+      </div>
+      <div id="cartList" class="list mt-2"></div>
+      <div class="item-top mt-3">
+        <strong>Total</strong>
+        <strong class="nominal" id="cartTotal">Rp 0</strong>
+      </div>
+      <p class="form-error" id="error"></p>
+      <div class="form-row mt-3">
+        <button type="button" class="secondary" id="btnPreview" disabled>Preview Nota</button>
+        <button type="button" class="primary" id="btnSave" disabled>
+          <span class="btn-label">Simpan Penjualan</span>
           <span class="btn-spinner"></span>
         </button>
-      </form>
+      </div>
     </section>
 
     <section class="card mt-3">
       <div class="summary summary-income">
         <div class="summary-icon">📈</div>
         <div class="summary-content">
-          <div class="summary-label">Total Pemasukan</div>
+          <div class="summary-label">Total Penjualan</div>
           <div class="summary-value" id="total">Rp 0</div>
         </div>
       </div>
@@ -90,6 +97,8 @@
       <div id="list" class="list"></div>
     </section>
   </main>
+
+  <div id="receiptPrint" class="receipt-print" aria-hidden="true"></div>
 
   <script src="/js/app.js"></script>
   <script src="/js/pemasukan.js"></script>

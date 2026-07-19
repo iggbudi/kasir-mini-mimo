@@ -77,7 +77,7 @@ Transaksi keuangan tidak dihapus permanen. Endpoint `DELETE` melakukan pembatala
 
 ### Master Barang
 
-Master barang menyimpan harga default tanpa mengubah histori transaksi lama. Harga pada transaksi pemasukan tetap disimpan sebagai snapshot.
+Master barang menyimpan harga default tanpa mengubah histori transaksi lama. Nama dan harga pada detail penjualan tetap disimpan sebagai snapshot.
 
 Field:
 
@@ -98,9 +98,44 @@ Endpoint:
 | DELETE | `/api/barang/:id` | Arsipkan tanpa menghapus histori |
 | POST | `/api/barang/:id/aktifkan` | Aktifkan kembali barang |
 
-UI pemasukan menyediakan pilihan eksplisit `Retail` atau `Grosir` jika barang memiliki harga grosir. Harga satuan tetap dapat disesuaikan sebelum transaksi disimpan.
+UI penjualan menyediakan pilihan eksplisit `Retail` atau `Grosir` jika barang memiliki harga grosir. Harga satuan tetap dapat disesuaikan sebagai harga khusus sebelum transaksi disimpan.
 
-### Pemasukan
+### Penjualan
+
+Penjualan memakai model master-detail: satu header transaksi memiliki satu atau lebih detail barang. Tidak ada field pelanggan, uang diterima, kembalian, maupun nama toko pada nota.
+
+#### POST `/api/penjualan`
+
+Header opsional `Idempotency-Key` didukung.
+
+```json
+{
+  "items": [
+    { "barang_id": 1, "quantity": 2, "harga": 15000, "jenis_harga": "retail" },
+    { "barang_id": 2, "quantity": 1, "harga": 12000, "jenis_harga": "grosir" }
+  ]
+}
+```
+
+`jenis_harga`: `retail` | `grosir` | `khusus`. Server mengambil nama barang aktif dari master, lalu menyimpan nama, harga, quantity, jenis harga, dan subtotal sebagai snapshot detail. Nomor nota dibuat otomatis dengan format `PJ-YYYYMMDD-ID`.
+
+#### GET `/api/penjualan?dari=&sampai=`
+
+Mengembalikan daftar header penjualan beserta nomor nota, total, tanggal, dan jumlah item. Transaksi pemasukan lama ikut dikembalikan sebagai penjualan satu item dengan flag `legacy=1`.
+
+#### GET `/api/penjualan/:id`
+
+Mengembalikan header dan seluruh detail untuk preview/cetak nota. Untuk transaksi lama gunakan query `?legacy=1`.
+
+#### DELETE `/api/penjualan/:id`
+
+Membatalkan header dan seluruh detail secara atomik. Untuk transaksi lama gunakan query `?legacy=1`.
+
+Nota hanya berisi nomor nota, tanggal, detail barang, dan total. Cetak menggunakan layout thermal 58 mm melalui browser.
+
+### Pemasukan Lama (Kompatibilitas)
+
+Endpoint berikut dipertahankan untuk client/data lama dan tidak digunakan oleh UI Penjualan baru.
 
 #### GET `/api/pemasukan?dari=&sampai=`
 
@@ -320,7 +355,7 @@ Menghasilkan JSON dari satu consistent read transaction. Metadata backup:
 | `counts` | Jumlah record setiap tabel |
 | `checksum_sha256` | Checksum bagian data backup |
 
-Backup mencakup master barang, transaksi aktif, dan transaksi yang dibatalkan. Restore tidak disediakan sebagai endpoint HTTP; jalankan dari lingkungan tepercaya:
+Backup mencakup master barang, header/detail penjualan, transaksi aktif, dan transaksi yang dibatalkan. Restore tidak disediakan sebagai endpoint HTTP; jalankan dari lingkungan tepercaya:
 
 ```bash
 RESTORE_CONFIRM=RESTORE_KASIR_MINI npm run db:restore -- path/backup.json

@@ -25,7 +25,8 @@
       listEl.innerHTML = items.map(item => {
         let icon = '📋';
         let typeLabel = item.tipe;
-        if (item.tipe === 'pemasukan') { icon = '📈'; typeLabel = 'Penjualan'; }
+        if (item.tipe === 'pemasukan') { icon = '📈'; typeLabel = 'Penjualan lama'; }
+        else if (item.tipe === 'penjualan') { icon = '🧾'; typeLabel = 'Penjualan'; }
         else if (item.tipe === 'pengeluaran') { icon = '📉'; typeLabel = 'Pengeluaran'; }
         else if (item.tipe === 'kasbon') { icon = '📒'; typeLabel = 'Kasbon baru'; }
         else if (item.tipe === 'kasbon_bayar') { icon = '💰'; typeLabel = 'Pembayaran kasbon'; }

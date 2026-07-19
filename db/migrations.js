@@ -44,6 +44,29 @@ const MIGRATIONS = [
       await transaction.execute('CREATE INDEX IF NOT EXISTS idx_master_barang_aktif_nama ON master_barang(aktif, nama)');
       await transaction.execute('CREATE INDEX IF NOT EXISTS idx_pemasukan_barang_id ON pemasukan(barang_id)');
     }
+  },
+  {
+    version: 4,
+    name: 'penjualan_master_detail',
+    up: async (transaction) => {
+      await transaction.execute(`
+        CREATE TABLE IF NOT EXISTS penjualan (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          nomor_nota TEXT NOT NULL UNIQUE,
+          total INTEGER NOT NULL CHECK (total > 0),
+          tanggal TEXT NOT NULL,
+          request_id TEXT,
+          payload_hash TEXT,
+          voided_at TEXT,
+          void_reason TEXT
+        )
+      `);
+      await ensureColumn(transaction, 'pemasukan', 'penjualan_id', 'INTEGER REFERENCES penjualan(id)');
+      await ensureColumn(transaction, 'pemasukan', 'jenis_harga', "TEXT CHECK (jenis_harga IN ('retail', 'grosir', 'khusus'))");
+      await transaction.execute('CREATE UNIQUE INDEX IF NOT EXISTS idx_penjualan_request_id ON penjualan(request_id) WHERE request_id IS NOT NULL');
+      await transaction.execute('CREATE INDEX IF NOT EXISTS idx_penjualan_tanggal ON penjualan(tanggal)');
+      await transaction.execute('CREATE INDEX IF NOT EXISTS idx_pemasukan_penjualan_id ON pemasukan(penjualan_id)');
+    }
   }
 ];
 

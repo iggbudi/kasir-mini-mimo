@@ -69,7 +69,7 @@
     });
     listEl.querySelectorAll('[data-archive]').forEach(button => {
       button.addEventListener('click', async () => {
-        const ok = await KasirApp.confirmDialog('Arsipkan Barang', 'Barang tidak lagi muncul saat mencatat pemasukan. Lanjutkan?');
+        const ok = await KasirApp.confirmDialog('Arsipkan Barang', 'Barang tidak lagi muncul saat mencatat penjualan. Lanjutkan?');
         if (!ok) return;
         button.disabled = true;
         try {

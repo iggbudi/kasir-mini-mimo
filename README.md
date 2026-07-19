@@ -1,11 +1,11 @@
 # Kasir Mini
 
-Aplikasi kasir sederhana berbasis web untuk warung sembako kecil. Mendukung pencatatan pemasukan, pengeluaran, kasbon (hutang pelanggan), dashboard, riwayat, dan backup.
+Aplikasi kasir sederhana berbasis web untuk warung sembako kecil. Mendukung penjualan multi-barang, pengeluaran, kasbon (hutang pelanggan), dashboard, riwayat, nota, dan backup.
 
 ## Fitur Utama
 - Login admin sederhana
 - Master barang: nama, harga retail, harga grosir opsional, arsip
-- Pemasukan (penjualan): pilih master barang dan jenis harga retail/grosir, batalkan dengan jejak audit, filter tanggal
+- Penjualan master-detail: keranjang multi-barang, harga retail/grosir/khusus, preview dan cetak nota thermal 58 mm
 - Pengeluaran: tambah, lihat, batalkan dengan jejak audit, filter tanggal
 - Kasbon: tambah, bayar bertahap, batalkan dengan jejak audit, lihat status + progress bar
 - Dashboard ringkasan hari ini (quick stats)
@@ -119,7 +119,8 @@ Database akan ter-inisialisasi otomatis saat build via `vercel-build` script. Ji
 │   ├── auth.js         # Login/logout/me
 │   ├── setting.js      # Nama warung
 │   ├── barang.js       # Master barang + harga retail/grosir
-│   ├── pemasukan.js    # CRUD pemasukan
+│   ├── penjualan.js    # Penjualan master-detail + nota
+│   ├── pemasukan.js    # Kompatibilitas transaksi lama
 │   ├── pengeluaran.js  # CRUD pengeluaran
 │   ├── kasbon.js       # CRUD kasbon + bayar
 │   ├── ringkasan.js    # Dashboard stats

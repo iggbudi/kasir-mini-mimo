@@ -1019,3 +1019,43 @@ button[data-loading="true"] .btn-label { opacity: 0.85; }
   .list-item, .toast, .modal-overlay, .modal, .menu-card, .list-item { animation: none; }
   button, .button, .nav-link, .btn-filter, .menu-card, .stat-card, .list-item, .toast, .progress-bar__fill { transition: none; }
 }
+
+.receipt-modal { max-width: 380px; }
+.receipt-paper {
+  width: 100%;
+  max-width: 300px;
+  margin: 0 auto;
+  padding: 16px 12px;
+  color: #111;
+  background: #fff;
+  border: 1px dashed #94a3b8;
+  font-family: "Courier New", monospace;
+  font-size: 12px;
+}
+.receipt-meta { line-height: 1.5; }
+.receipt-rule { margin: 9px 0; border-top: 1px dashed #111; }
+.receipt-item { margin: 0 0 8px; }
+.receipt-item__price,
+.receipt-total { display: flex; justify-content: space-between; gap: 12px; }
+.receipt-total { font-size: 14px; }
+.receipt-print { display: none; }
+
+@media print {
+  @page { size: 58mm auto; margin: 0; }
+  body.printing-receipt { margin: 0; padding: 0; background: #fff; }
+  body.printing-receipt > *:not(.receipt-print) { display: none !important; }
+  body.printing-receipt .receipt-print {
+    display: block !important;
+    width: 58mm;
+    margin: 0;
+    padding: 0;
+  }
+  body.printing-receipt .receipt-paper {
+    width: 58mm;
+    max-width: none;
+    margin: 0;
+    padding: 4mm 3mm;
+    border: 0;
+    box-sizing: border-box;
+  }
+}

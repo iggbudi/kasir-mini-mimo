@@ -26,6 +26,23 @@ router.get('/', async (req, res) => {
         tanggal
       FROM pemasukan
       ${dateFilter}
+      AND penjualan_id IS NULL
+    `;
+
+    const penjualanSql = `
+      SELECT
+        'penjualan' as tipe,
+        id,
+        nomor_nota as label,
+        total as nominal,
+        'masuk' as arah,
+        CASE WHEN voided_at IS NULL THEN total ELSE 0 END as dampak_kas,
+        CASE WHEN voided_at IS NULL THEN 0 ELSE 1 END as dibatalkan,
+        voided_at,
+        void_reason,
+        tanggal
+      FROM penjualan
+      ${dateFilter}
     `;
 
     const pengeluaranSql = `
@@ -79,6 +96,8 @@ router.get('/', async (req, res) => {
 
     const fullSql = `
       ${pemasukanSql}
+      UNION ALL
+      ${penjualanSql}
       UNION ALL
       ${pengeluaranSql}
       UNION ALL
