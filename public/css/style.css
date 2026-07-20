@@ -229,22 +229,6 @@ textarea:focus-visible {
   flex-wrap: wrap;
 }
 
-.dashboard-hero__kasbon {
-  padding: 6px 10px;
-  border-radius: var(--radius-sm);
-  background: rgba(246, 241, 230, 0.1);
-  color: rgba(246, 241, 230, 0.75);
-  font-family: var(--font-mono);
-  font-size: var(--fs-meta);
-  font-weight: 500;
-}
-
-.dashboard-hero__kasbon strong {
-  color: var(--paper);
-  font-weight: 600;
-  font-variant-numeric: tabular-nums;
-}
-
 .connection-status {
   display: inline-flex;
   align-items: center;

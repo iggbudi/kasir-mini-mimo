@@ -30,7 +30,7 @@
         <p class="dashboard-hero__mini-summary">
           Kas masuk <strong id="statIncome">-</strong> · Keluar <strong id="statExpense">-</strong>
           <span class="dashboard-hero__cash-breakdown">
-            Penjualan <strong id="statSales">-</strong> · Bayar kasbon <strong id="statKasbonPayment">-</strong><br>
+            Penjualan <strong id="statSales">-</strong><br>
             Biaya <strong id="statOperationalExpense">-</strong> · Kulakan <strong id="statPurchase">-</strong>
           </span>
         </p>
@@ -38,7 +38,6 @@
 
       <div class="dashboard-hero__footer">
         <span class="connection-status" id="connectionStatus" aria-live="polite">● Online</span>
-        <span class="dashboard-hero__kasbon">Kasbon <strong id="statKasbon">-</strong></span>
       </div>
     </header>
 
@@ -131,20 +130,16 @@
         document.getElementById('statCash').textContent = KasirApp.formatRupiah(data.sisa_kas || 0);
         document.getElementById('statIncome').textContent = KasirApp.formatRupiahShort(data.total_kas_masuk ?? data.pemasukan ?? 0);
         document.getElementById('statSales').textContent = KasirApp.formatRupiahShort(data.pemasukan_penjualan ?? data.pemasukan ?? 0);
-        document.getElementById('statKasbonPayment').textContent = KasirApp.formatRupiahShort(data.pembayaran_kasbon || 0);
         document.getElementById('statExpense').textContent = KasirApp.formatRupiahShort(data.total_kas_keluar ?? data.pengeluaran ?? 0);
         document.getElementById('statOperationalExpense').textContent = KasirApp.formatRupiahShort(data.pengeluaran || 0);
         document.getElementById('statPurchase').textContent = KasirApp.formatRupiahShort(data.kulakan || 0);
-        document.getElementById('statKasbon').textContent = KasirApp.formatRupiahShort(data.kasbon_outstanding || 0);
       } catch (_e) {
         document.getElementById('statCash').textContent = '-';
         document.getElementById('statIncome').textContent = '-';
         document.getElementById('statSales').textContent = '-';
-        document.getElementById('statKasbonPayment').textContent = '-';
         document.getElementById('statExpense').textContent = '-';
         document.getElementById('statOperationalExpense').textContent = '-';
         document.getElementById('statPurchase').textContent = '-';
-        document.getElementById('statKasbon').textContent = '-';
       }
     })();
   </script>
