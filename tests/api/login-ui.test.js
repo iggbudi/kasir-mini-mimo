@@ -39,8 +39,8 @@ test('GET /login.html melayani landing page dengan hero dan modal login', async 
   assert.equal(res.status, 200);
   const html = await res.text();
 
-  assert.match(html, /class="landing-nav"/);
-  assert.match(html, /class="landing-hero"/);
+  assert.match(html, /class="site-nav"/);
+  assert.match(html, /class="hero"/);
   assert.match(html, /Hubungi Saya untuk Instalasi/);
   assert.match(html, /id="loginDialog"/);
   assert.match(html, /data-open-login/);
@@ -56,7 +56,7 @@ test('GET /login (tanpa ekstensi) juga melayani landing page', async () => {
   const res = await rawGet('/login');
   assert.equal(res.status, 200);
   const html = await res.text();
-  assert.match(html, /class="landing-hero"/);
+  assert.match(html, /class="hero"/);
   assert.match(html, /id="loginDialog"/);
   assert.match(html, /id="togglePassword"/);
 });
@@ -113,7 +113,7 @@ test('asset login.css dan login.js tersedia', async () => {
   const css = await rawGet('/css/login.css');
   assert.equal(css.status, 200);
   const cssText = await css.text();
-  assert.match(cssText, /\.landing-hero/);
+  assert.match(cssText, /\.hero \{/);
   assert.match(cssText, /\.login-dialog/);
   assert.match(cssText, /\.auth-submit__spinner/);
 
