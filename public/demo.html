@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>Demo Kasir Mini</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800;900&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+  <link rel="stylesheet" href="/css/demo.css">
+</head>
+<body class="demo-body">
+  <header class="demo-head">
+    <h1>Demo Kasir Mini</h1>
+    <p>Tonton alur singkat: login, dashboard, catat penjualan, dan cetak nota thermal — di layar HP.</p>
+    <a class="demo-back" href="/login.html">
+      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>
+      Kembali ke beranda
+    </a>
+  </header>
+
+  <div class="phone" aria-label="Simulasi aplikasi Kasir Mini">
+    <div class="phone__notch" aria-hidden="true"></div>
+    <div class="phone__screen" id="phoneScreen">
+      <div class="statusbar">
+        <span class="statusbar__time" id="statusTime">10.42</span>
+        <span class="statusbar__dots" aria-hidden="true"><span></span><span></span><span></span><span></span></span>
+      </div>
+
+      <div class="screen-wrap">
+        <!-- Scene: Login -->
+        <section class="scene login-scene" id="sceneLogin">
+          <p class="login-scene__brand">KASIR MINI</p>
+          <h2 class="login-scene__title">Login ke Kasir Mini</h2>
+          <p class="login-scene__sub">Gunakan akun admin untuk membuka aplikasi.</p>
+          <div class="demo-field">
+            <label for="demoUser">Username</label>
+            <div class="demo-input"><span id="demoUser">kasir</span><span class="cursor" aria-hidden="true"></span></div>
+          </div>
+          <div class="demo-field">
+            <label for="demoPass">Password</label>
+            <div class="demo-input"><span class="dots" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i></span></div>
+          </div>
+          <button class="demo-btn" id="demoLoginBtn" type="button">
+            <span class="label">Masuk</span>
+            <span class="spinner" aria-hidden="true"></span>
+          </button>
+        </section>
+
+        <!-- Scene: Dashboard -->
+        <section class="scene dash-scene" id="sceneDash">
+          <div class="dash-hero">
+            <div class="dash-hero__top">
+              <div>
+                <h2 class="dash-hero__warung">Warung Berkah</h2>
+                <p class="dash-hero__greet">Halo, Admin</p>
+              </div>
+              <button class="dash-hero__logout" type="button">Keluar</button>
+            </div>
+            <p class="dash-hero__time" id="dashTime">21/07/2026 · 10.42</p>
+            <div class="dash-cash">
+              <p class="dash-cash__label">Sisa kas hari ini</p>
+              <p class="dash-cash__value" id="dashCash">Rp0</p>
+              <p class="dash-cash__mini">Kas masuk <strong id="dashIn">Rp0</strong> · Keluar <strong id="dashOut">Rp0</strong></p>
+            </div>
+            <span class="dash-status"><span class="dot"></span> Online</span>
+          </div>
+          <p class="dash-section-label">Menu Transaksi</p>
+          <div class="menu-grid">
+            <a class="menu-card income" id="menuJual" href="#">
+              <div class="menu-card__icon"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg></div>
+              <div class="menu-card__label">Penjualan</div>
+              <div class="menu-card__desc">Keranjang &amp; nota</div>
+            </a>
+            <a class="menu-card expense" href="#">
+              <div class="menu-card__icon"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="23 18 13.5 8.5 8.5 13.5 1 6"/><polyline points="17 18 23 18 23 12"/></svg></div>
+              <div class="menu-card__label">Pengeluaran</div>
+              <div class="menu-card__desc">Catat biaya</div>
+            </a>
+          </div>
+        </section>
+        <!-- Scene: Penjualan -->
+        <section class="scene sell-scene" id="sceneSell">
+          <div class="sell-head"><h2>Penjualan</h2><span class="pill">RETAIL</span></div>
+          <div class="item-list" id="itemList"></div>
+          <div class="cart" id="cart"></div>
+        </section>
+
+        <!-- Scene: Nota (overlay) -->
+        <section class="scene nota-scene" id="sceneNota">
+          <div class="nota">
+            <p class="nota__shop">Warung Berkah</p>
+            <p class="nota__meta">Jl. Melati No. 8 · 21/07/2026 10.42</p>
+            <p class="nota__meta">NOTA #KM-0042 · KASIR: ADMIN</p>
+            <div class="nota__rule"></div>
+            <div class="nota__rows" id="notaRows"></div>
+            <div class="nota__rule"></div>
+            <div class="nota__rows nota__grand">
+              <div><span>Total</span><span id="notaTotal">0</span></div>
+              <div><span>Tunai</span><span>100.000</span></div>
+              <div><span>Kembali</span><span id="notaKembali">0</span></div>
+            </div>
+            <div class="nota__rule"></div>
+            <p class="nota__thanks">— Terima kasih —</p>
+            <span class="nota__stamp" aria-hidden="true">Tunai</span>
+          </div>
+        </section>
+      </div>
+      <nav class="demo-nav" id="demoNav" aria-label="Navigasi utama">
+        <a href="#" data-tab="home" class="is-active"><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/><path d="M9 21v-6h6v6"/></svg></span>Beranda</a>
+        <a href="#" data-tab="jual"><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12v18l-2-1.4-2 1.4-2-1.4-2 1.4-2-1.4L6 21V3Z"/><path d="M9 8h6M9 12h6"/></svg></span>Jual</a>
+        <a href="#" data-tab="keluar"><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 18 13.5 8.5 8.5 13.5 1 6"/><polyline points="17 18 23 18 23 12"/></svg></span>Keluar</a>
+        <a href="#" data-tab="kulakan"><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8 12 3 3 8v8l9 5 9-5V8Z"/><path d="m3 8 9 5 9-5"/><path d="M12 13v8"/></svg></span>Kulakan</a>
+        <a href="#" data-tab="atur"><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"/></svg></span>Atur</a>
+      </nav>
+      <div class="home-indicator" aria-hidden="true"></div>
+    </div>
+  </div>
+
+  <p class="demo-caption" id="caption">1 · Login admin</p>
+  <div class="demo-controls">
+    <button id="btnPlay" type="button" class="is-on">▶ Putar</button>
+    <button id="btnNext" type="button">⏭ Langkah</button>
+    <button id="btnReplay" type="button">↺ Ulang</button>
+  </div>
+
+  <script src="/js/demo.js"></script>
+</body>
+</html>
