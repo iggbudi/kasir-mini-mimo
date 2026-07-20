@@ -5,3 +5,5 @@ db/*.db-*
 .mimocode/
 .DS_Store
 npm-debug.log*
+.idea/
+.commandcode/
