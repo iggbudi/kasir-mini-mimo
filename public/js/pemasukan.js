@@ -3,7 +3,10 @@
 
   const KasirApp = window.KasirApp;
   const formItem = document.getElementById('formItem');
-  const barangSelect = document.getElementById('barangId');
+  const barangIdInput = document.getElementById('barangId');
+  const barangSearchInput = document.getElementById('barangSearch');
+  const barangOptions = document.getElementById('barangOptions');
+  const productCombobox = document.getElementById('productCombobox');
   const jenisHargaSelect = document.getElementById('jenisHarga');
   const quantityInput = document.getElementById('quantity');
   const hargaInput = document.getElementById('harga');
@@ -27,6 +30,8 @@
   let currentFilter = 'today';
   let currentDateDari = '';
   let currentDateSampai = '';
+  let productSearchTimer = null;
+  let productSearchSequence = 0;
 
   function getDateParams() {
     const today = KasirApp.getTodayStr();
@@ -40,7 +45,71 @@
   }
 
   function selectedProduct() {
-    return masterBarang.find(item => String(item.id) === barangSelect.value) || null;
+    return masterBarang.find(item => String(item.id) === barangIdInput.value) || null;
+  }
+
+  function closeProductOptions() {
+    barangOptions.classList.add('hidden');
+    barangSearchInput.setAttribute('aria-expanded', 'false');
+  }
+
+  function openProductOptions() {
+    barangOptions.classList.remove('hidden');
+    barangSearchInput.setAttribute('aria-expanded', 'true');
+  }
+
+  function showProductStatus(message) {
+    barangOptions.innerHTML = `<p class="product-options__status">${KasirApp.escapeHtml(message)}</p>`;
+    openProductOptions();
+  }
+
+  function selectProduct(id) {
+    const product = masterBarang.find(item => String(item.id) === String(id));
+    if (!product) return;
+    clearTimeout(productSearchTimer);
+    productSearchSequence += 1;
+    barangIdInput.value = product.id;
+    barangSearchInput.value = product.nama;
+    closeProductOptions();
+    errorEl.textContent = '';
+    applySelectedPrice();
+  }
+
+  function renderProductOptions(items) {
+    if (items.length === 0) {
+      showProductStatus('Barang tidak ditemukan');
+      return;
+    }
+
+    barangOptions.innerHTML = items.map(item => {
+      const price = jenisHargaSelect.value === 'grosir' && item.harga_grosir
+        ? item.harga_grosir
+        : item.harga_retail;
+      return `
+        <button type="button" class="product-option" role="option" data-product-id="${item.id}">
+          <span class="product-option__name">${KasirApp.escapeHtml(item.nama)}</span>
+          <span class="product-option__price">${KasirApp.formatRupiah(price)}</span>
+        </button>
+      `;
+    }).join('');
+
+    barangOptions.querySelectorAll('[data-product-id]').forEach(button => {
+      button.addEventListener('click', () => selectProduct(button.dataset.productId));
+    });
+    openProductOptions();
+  }
+
+  async function searchProducts(query, sequence) {
+    showProductStatus('Mencari barang...');
+    try {
+      const response = await KasirApp.apiFetch(`/api/barang?status=aktif&q=${encodeURIComponent(query)}`);
+      if (sequence !== productSearchSequence) return;
+      masterBarang = response.data || [];
+      renderProductOptions(masterBarang);
+    } catch (err) {
+      if (sequence !== productSearchSequence) return;
+      showProductStatus(err.message || 'Gagal mencari barang');
+    }
   }
 
   function applySelectedPrice() {
@@ -63,22 +132,6 @@
     subtotalEl.textContent = quantity > 0 && price > 0
       ? `Subtotal: ${KasirApp.formatRupiah(quantity * price)}`
       : '';
-  }
-
-  async function loadMasterBarang() {
-    try {
-      const response = await KasirApp.apiFetch('/api/barang?status=aktif');
-      masterBarang = response.data || [];
-      barangSelect.innerHTML = '<option value="">Pilih barang</option>' + masterBarang.map(item => `
-        <option value="${item.id}">${KasirApp.escapeHtml(item.nama)}</option>
-      `).join('');
-      if (masterBarang.length === 0) {
-        barangSelect.innerHTML = '<option value="">Belum ada master barang</option>';
-      }
-    } catch (err) {
-      barangSelect.innerHTML = '<option value="">Gagal memuat barang</option>';
-      errorEl.textContent = err.message || 'Gagal memuat master barang';
-    }
   }
 
   function getCartTotal() {
@@ -293,8 +346,60 @@
     updateSubtotal();
   });
 
-  barangSelect.addEventListener('change', applySelectedPrice);
-  jenisHargaSelect.addEventListener('change', applySelectedPrice);
+  barangSearchInput.addEventListener('input', () => {
+    barangIdInput.value = '';
+    hargaInput.value = '';
+    updateSubtotal();
+    clearTimeout(productSearchTimer);
+
+    const query = barangSearchInput.value.trim();
+    const sequence = ++productSearchSequence;
+    if (query.length < 3) {
+      closeProductOptions();
+      return;
+    }
+    productSearchTimer = setTimeout(() => searchProducts(query, sequence), 250);
+  });
+
+  barangSearchInput.addEventListener('keydown', event => {
+    const options = [...barangOptions.querySelectorAll('[data-product-id]')];
+    if (event.key === 'ArrowDown' && options.length > 0) {
+      event.preventDefault();
+      options[0].focus();
+    } else if (event.key === 'Enter' && options.length > 0 && !barangOptions.classList.contains('hidden')) {
+      event.preventDefault();
+      options[0].click();
+    } else if (event.key === 'Escape') {
+      closeProductOptions();
+    }
+  });
+
+  barangOptions.addEventListener('keydown', event => {
+    const options = [...barangOptions.querySelectorAll('[data-product-id]')];
+    const index = options.indexOf(document.activeElement);
+    if (event.key === 'ArrowDown' && index >= 0) {
+      event.preventDefault();
+      options[Math.min(index + 1, options.length - 1)].focus();
+    } else if (event.key === 'ArrowUp' && index >= 0) {
+      event.preventDefault();
+      if (index === 0) barangSearchInput.focus();
+      else options[index - 1].focus();
+    } else if (event.key === 'Escape') {
+      closeProductOptions();
+      barangSearchInput.focus();
+    }
+  });
+
+  document.addEventListener('click', event => {
+    if (!productCombobox.contains(event.target)) closeProductOptions();
+  });
+
+  jenisHargaSelect.addEventListener('change', () => {
+    applySelectedPrice();
+    if (!barangOptions.classList.contains('hidden') && masterBarang.length > 0) {
+      renderProductOptions(masterBarang);
+    }
+  });
   quantityInput.addEventListener('input', updateSubtotal);
   hargaInput.addEventListener('input', updateSubtotal);
 
@@ -362,6 +467,5 @@
   });
 
   renderCart();
-  loadMasterBarang();
   loadSales();
 })();

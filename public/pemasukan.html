@@ -36,11 +36,22 @@
 
       <h3 class="section-title mt-3">Tambah Barang</h3>
       <form id="formItem">
-        <label for="barangId">Barang</label>
-        <select id="barangId" required>
-          <option value="">Memuat master barang...</option>
-        </select>
-        <p class="small muted mt-2"><a href="/barang.html">Kelola master barang</a></p>
+        <label for="barangSearch">Barang</label>
+        <div class="product-combobox" id="productCombobox">
+          <input
+            id="barangSearch"
+            type="search"
+            autocomplete="off"
+            role="combobox"
+            aria-autocomplete="list"
+            aria-controls="barangOptions"
+            aria-expanded="false"
+            placeholder="Ketik minimal 3 karakter..."
+          >
+          <input id="barangId" type="hidden">
+          <div id="barangOptions" class="product-options hidden" role="listbox"></div>
+        </div>
+        <p class="small muted mt-2">Ketik minimal 3 karakter nama barang · <a href="/barang.html">Kelola master barang</a></p>
 
         <div class="form-row mt-2">
           <div style="max-width:90px;">

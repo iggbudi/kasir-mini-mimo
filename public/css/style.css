@@ -399,6 +399,57 @@ select {
   padding-right: 36px;
 }
 
+.product-combobox {
+  position: relative;
+}
+
+.product-combobox input[type="search"]::-webkit-search-cancel-button {
+  cursor: pointer;
+}
+
+.product-options {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 5px);
+  left: 0;
+  right: 0;
+  max-height: 280px;
+  overflow-y: auto;
+  border: 1.5px solid var(--line-strong);
+  border-radius: var(--radius-sm);
+  background: var(--sheet);
+  box-shadow: 0 10px 24px rgba(37, 33, 24, 0.16);
+}
+
+.product-option {
+  width: 100%;
+  min-height: 52px;
+  padding: 9px 13px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  border-radius: 0;
+  background: transparent;
+  color: var(--ink);
+  text-align: left;
+}
+
+.product-option:last-child { border-bottom: 0; }
+.product-option:hover, .product-option:focus { background: var(--paper); }
+.product-option__name { min-width: 0; font-weight: 700; overflow-wrap: anywhere; }
+.product-option__price { flex-shrink: 0; color: var(--ink-soft); font-family: var(--font-mono); font-size: 12px; }
+
+.product-options__status {
+  margin: 0;
+  padding: 14px;
+  color: var(--ink-soft);
+  font-size: 13px;
+  text-align: center;
+}
+
 .form-row {
   display: flex;
   gap: 8px;
