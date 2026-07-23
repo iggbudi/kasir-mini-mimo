@@ -24,8 +24,19 @@
   const dateDari = document.getElementById('dateDari');
   const dateSampai = document.getElementById('dateSampai');
   const receiptPrint = document.getElementById('receiptPrint');
+  
+  // Product Browser elements
+  const btnBrowseAll = document.getElementById('btnBrowseAll');
+  const btnBrowseLink = document.getElementById('btnBrowseLink');
+  const productBrowserModal = document.getElementById('productBrowserModal');
+  const browserSearch = document.getElementById('browserSearch');
+  const browserList = document.getElementById('browserList');
+  const browserCount = document.getElementById('browserCount');
+  const browserStatus = document.getElementById('browserStatus');
 
   let masterBarang = [];
+  let allProductsCache = [];
+  let browserSearchTimer = null;
   let cart = [];
   let currentFilter = 'today';
   let currentDateDari = '';
@@ -110,6 +121,104 @@
       if (sequence !== productSearchSequence) return;
       showProductStatus(err.message || 'Gagal mencari barang');
     }
+  }
+
+  // === Product Browser Functions ===
+
+  function openProductBrowser() {
+    productBrowserModal.classList.remove('hidden');
+    productBrowserModal.setAttribute('aria-hidden', 'false');
+    document.body.style.overflow = 'hidden';
+    browserSearch.value = '';
+    browserSearch.focus();
+    loadBrowserProducts();
+  }
+
+  function closeProductBrowser() {
+    productBrowserModal.classList.add('hidden');
+    productBrowserModal.setAttribute('aria-hidden', 'true');
+    document.body.style.overflow = '';
+  }
+
+  async function loadBrowserProducts(query) {
+    browserStatus.textContent = 'Memuat...';
+    try {
+      const searchParam = query ? `&q=${encodeURIComponent(query)}` : '';
+      const response = await KasirApp.apiFetch(`/api/barang?status=aktif${searchParam}`);
+      allProductsCache = response.data || [];
+      renderBrowserProducts(allProductsCache, query);
+    } catch (err) {
+      browserStatus.textContent = '';
+      browserList.innerHTML = `
+        <div class="product-browser__empty">
+          <div class="product-browser__empty-icon">⚠️</div>
+          <p class="product-browser__empty-text">${KasirApp.escapeHtml(err.message || 'Gagal memuat barang')}</p>
+        </div>
+      `;
+    }
+  }
+
+  function renderBrowserProducts(items, query) {
+    const countText = `${items.length} barang`;
+    browserCount.textContent = countText;
+    browserStatus.textContent = query ? `Hasil: "${query}"` : '';
+
+    if (items.length === 0) {
+      browserList.innerHTML = `
+        <div class="product-browser__empty">
+          <div class="product-browser__empty-icon">📦</div>
+          <p class="product-browser__empty-text">${query ? 'Barang tidak ditemukan' : 'Belum ada barang'}</p>
+        </div>
+      `;
+      return;
+    }
+
+    const currentJenisHarga = jenisHargaSelect.value;
+    browserList.innerHTML = items.map(item => {
+      const retailPrice = item.harga_retail;
+      const grosirPrice = item.harga_grosir;
+      const hasGrosir = grosirPrice && grosirPrice > 0;
+      const isGrosir = currentJenisHarga === 'grosir' && hasGrosir;
+
+      return `
+        <div class="product-browser__item" data-browser-product-id="${item.id}">
+          <div class="product-browser__item-info">
+            <div class="product-browser__item-name">${KasirApp.escapeHtml(item.nama)}</div>
+            <div class="product-browser__item-prices">
+              <span class="product-browser__item-retail">Retail: ${KasirApp.formatRupiah(retailPrice)}</span>
+              ${hasGrosir ? `<span class="product-browser__item-grosir">Grosir: ${KasirApp.formatRupiah(grosirPrice)}</span>` : ''}
+            </div>
+          </div>
+          <div class="product-browser__item-action">
+            <button type="button" class="primary btn-sm product-browser__item-select" data-select-id="${item.id}">
+              Pilih
+            </button>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    browserList.querySelectorAll('[data-select-id]').forEach(button => {
+      button.addEventListener('click', (e) => {
+        e.stopPropagation();
+        selectFromBrowser(button.dataset.selectId);
+      });
+    });
+
+    browserList.querySelectorAll('[data-browser-product-id]').forEach(item => {
+      item.addEventListener('click', () => {
+        selectFromBrowser(item.dataset.browserProductId);
+      });
+    });
+  }
+
+  function selectFromBrowser(productId) {
+    const product = allProductsCache.find(item => String(item.id) === String(productId));
+    if (!product) return;
+
+    selectProduct(product.id);
+    closeProductBrowser();
+    quantityInput.focus();
   }
 
   function applySelectedPrice() {
@@ -464,6 +573,39 @@
     currentDateSampai = dateSampai.value;
     if (!currentDateDari) return KasirApp.showToast('Pilih tanggal dulu', 'error');
     loadSales();
+  });
+
+  // === Product Browser Event Listeners ===
+
+  btnBrowseAll.addEventListener('click', openProductBrowser);
+  btnBrowseLink.addEventListener('click', openProductBrowser);
+
+  productBrowserModal.addEventListener('click', (event) => {
+    if (event.target === productBrowserModal) {
+      closeProductBrowser();
+    }
+  });
+
+  productBrowserModal.querySelector('[data-action="close"]').addEventListener('click', closeProductBrowser);
+
+  browserSearch.addEventListener('input', () => {
+    clearTimeout(browserSearchTimer);
+    const query = browserSearch.value.trim();
+    browserSearchTimer = setTimeout(() => {
+      loadBrowserProducts(query);
+    }, 200);
+  });
+
+  browserSearch.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') {
+      closeProductBrowser();
+    }
+  });
+
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && !productBrowserModal.classList.contains('hidden')) {
+      closeProductBrowser();
+    }
   });
 
   renderCart();
