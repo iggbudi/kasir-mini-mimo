@@ -90,6 +90,12 @@ button, a { -webkit-tap-highlight-color: transparent; }
   text-transform: uppercase;
 }
 
+.site-brand__logo {
+  height: 38px;
+  width: auto;
+  object-fit: contain;
+}
+
 .nav-login {
   width: auto;
   min-height: 42px;
@@ -1007,6 +1013,7 @@ button, a { -webkit-tap-highlight-color: transparent; }
   .site-nav { width: calc(100% - 32px); min-height: 64px; }
   .site-brand__name { font-size: var(--fs-small); }
   .site-brand__mark { width: 34px; height: 34px; }
+  .site-brand__logo { height: 32px; }
   .nav-login { min-height: 40px; padding: 0 12px; }
 
   .hero { width: calc(100% - 32px); padding: 48px 0 64px; gap: 44px; }

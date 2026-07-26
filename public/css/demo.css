@@ -141,6 +141,7 @@
 /* === Scene: Login === */
 .login-scene { padding: 30px 26px; justify-content: center; gap: 18px; background: var(--paper); }
 .login-scene__brand { text-align: center; font-family: var(--font-mono); letter-spacing: 0.16em; font-size: 12px; font-weight: 700; color: var(--stamp); }
+.login-scene__brand-logo { display: block; margin: 0 auto 8px; height: 60px; width: auto; object-fit: contain; }
 .login-scene__title { text-align: center; font-size: 20px; font-weight: 800; margin: 0; }
 .login-scene__sub { text-align: center; color: var(--ink-soft); font-size: 13px; margin: -8px 0 0; }
 .demo-field { display: grid; gap: 6px; }
