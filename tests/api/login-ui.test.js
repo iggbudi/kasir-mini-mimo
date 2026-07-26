@@ -109,6 +109,15 @@ test('login gagal validasi: password kosong -> 400', async () => {
   assert.equal(body.success, false);
 });
 
+test('logo publik tersedia tanpa autentikasi sebagai gambar PNG', async () => {
+  const logo = await rawGet('/logo.png');
+  assert.equal(logo.status, 200);
+  assert.match(logo.headers.get('content-type') || '', /^image\/png/);
+
+  const bytes = new Uint8Array(await logo.arrayBuffer());
+  assert.deepEqual(Array.from(bytes.slice(0, 8)), [137, 80, 78, 71, 13, 10, 26, 10]);
+});
+
 test('asset login.css dan login.js tersedia', async () => {
   const css = await rawGet('/css/login.css');
   assert.equal(css.status, 200);

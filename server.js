@@ -72,7 +72,12 @@ app.get(['/login', '/login.html'], (_req, res) => {
 });
 
 app.use((req, res, next) => {
-  if (req.path.startsWith('/css/') || req.path.startsWith('/js/') || req.path === '/favicon.ico') return next();
+  const isPublicAsset =
+    req.path.startsWith('/css/') ||
+    req.path.startsWith('/js/') ||
+    /\.(?:ico|png|jpe?g|gif|webp|svg)$/i.test(req.path);
+
+  if (isPublicAsset) return next();
   if (!req.user) return res.redirect('/login.html');
   return next();
 });
