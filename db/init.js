@@ -113,7 +113,7 @@ async function initDb() {
   const password = process.env.ADMIN_PASSWORD || 'admin123';
 
   if (!existing) {
-    const passwordHash = bcrypt.hashSync(password, 12);
+    const passwordHash = await bcrypt.hash(password, 12);
     await run('INSERT INTO admin_user (username, password_hash) VALUES (?, ?)', [username, passwordHash]);
     console.log(`Admin user dibuat: ${username}`);
     if (!process.env.ADMIN_PASSWORD) {
@@ -121,7 +121,7 @@ async function initDb() {
     }
   } else {
     if (process.env.ADMIN_PASSWORD) {
-      const passwordHash = bcrypt.hashSync(password, 12);
+      const passwordHash = await bcrypt.hash(password, 12);
       await run('UPDATE admin_user SET password_hash = ? WHERE username = ?', [passwordHash, username]);
       console.log(`Password admin diperbarui dari ADMIN_PASSWORD: ${username}`);
     } else {

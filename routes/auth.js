@@ -30,7 +30,7 @@ router.post('/login', async (req, res) => {
 
   try {
     const user = await getOne('SELECT id, username, password_hash FROM admin_user WHERE username = ?', [username]);
-    const valid = user ? bcrypt.compareSync(password, user.password_hash) : false;
+    const valid = user ? await bcrypt.compare(password, user.password_hash) : false;
     if (!valid) {
       loginLimiter.recordFailure(clientIp);
       return fail(res, 401, 'Username atau password salah');
