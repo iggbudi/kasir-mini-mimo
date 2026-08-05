@@ -89,6 +89,7 @@ Field:
 | `nama` | Wajib, unik tanpa membedakan kapital/spasi ganda, maksimal 100 karakter |
 | `harga_retail` | Integer positif |
 | `harga_grosir` | Opsional, integer positif dan tidak melebihi harga retail |
+| `stok` | Integer ≥ 0; diubah otomatis oleh kulakan/penjualan/void dan opname manual |
 | `aktif` | `1` aktif, `0` diarsipkan |
 
 Endpoint:
@@ -98,6 +99,7 @@ Endpoint:
 | GET | `/api/barang?status=aktif&q=` | Daftar/filter master barang |
 | POST | `/api/barang` | Tambah barang |
 | PUT | `/api/barang/:id` | Ubah nama dan harga |
+| PUT | `/api/barang/:id/stok` | Opname stok `{ stok, catatan? }`; stok ≥ 0; tercatat di `stok_adjustment` |
 | DELETE | `/api/barang/:id` | Arsipkan tanpa menghapus histori |
 | POST | `/api/barang/:id/aktifkan` | Aktifkan kembali barang |
 
@@ -135,7 +137,7 @@ Kulakan memakai model master-detail berdasarkan salesman. Satu header memilih sa
 | GET | `/api/kulakan/:id` | Detail kulakan |
 | DELETE | `/api/kulakan/:id` | Batalkan dampak kas tanpa menghapus audit |
 
-Nomor kulakan dibuat otomatis dengan format `KL-YYYYMMDD-ID`. Kulakan dianggap dibayar langsung dan mengurangi kas pada tanggal transaksi. Pembatalan menghapus dampaknya dari kas. Fitur ini tidak mengubah stok karena aplikasi belum memiliki pencatatan inventory.
+Nomor kulakan dibuat otomatis dengan format `KL-YYYYMMDD-ID`. Kulakan dianggap dibayar langsung dan mengurangi kas pada tanggal transaksi. Pembatalan menghapus dampaknya dari kas. Kulakan **menambah stok** master barang sesuai quantity; pembatalan kulakan membalik efek stoknya (stok boleh minus jika barang sudah terjual).
 
 ### Penjualan
 
@@ -156,6 +158,8 @@ Header opsional `Idempotency-Key` didukung.
 ```
 
 `jenis_harga` (`retail` | `grosir`) berada pada header penjualan dan berlaku untuk seluruh detail berdasarkan `penjualan_id`. Harga per barang tetap dapat disesuaikan. Saat header Grosir dipilih, UI memakai harga grosir master jika tersedia dan fallback ke harga retail jika tidak tersedia. Server mengambil nama barang aktif dari master lalu menyimpan nama, harga, quantity, dan subtotal sebagai snapshot detail. Nomor nota dibuat otomatis dengan format `PJ-YYYYMMDD-ID`.
+
+**Stok:** Penjualan mengurangi stok master barang sesuai quantity dalam transaksi yang sama. Jika quantity melebihi stok tersedia, respons **409** `Stok <nama> tidak cukup (sisa <n>)` dan tidak ada perubahan. Pembatalan penjualan (void) mengembalikan stok; void dua kali tidak mengembalikan dua kali. Transaksi pemasukan lama (standalone) tidak menyentuh stok.
 
 #### GET `/api/penjualan?dari=&sampai=`
 

@@ -134,7 +134,7 @@ router.post('/', async (req, res) => {
       const productIds = [...new Set(parsedItems.map(item => item.barang_id))];
       const productResult = await transaction.execute({
         sql: `
-          SELECT id, nama
+          SELECT id, nama, stok
           FROM master_barang
           WHERE aktif = 1 AND id IN (${productIds.map(() => '?').join(', ')})
         `,
@@ -152,6 +152,28 @@ router.post('/', async (req, res) => {
         total += subtotal;
         if (!Number.isSafeInteger(total)) throw new BusinessError(400, 'Total penjualan terlalu besar');
         details.push({ ...item, nama: product.nama });
+      }
+
+      // Stok: validasi kecukupan lalu kurangi dalam transaksi yang sama.
+      const qtyByProduct = new Map();
+      for (const detail of details) {
+        qtyByProduct.set(detail.barang_id, (qtyByProduct.get(detail.barang_id) || 0) + detail.quantity);
+      }
+      for (const [productId, qty] of qtyByProduct) {
+        const product = productById.get(productId);
+        const stokTersedia = Number(product?.stok || 0);
+        if (stokTersedia < qty) {
+          throw new BusinessError(409, `Stok ${product.nama} tidak cukup (sisa ${stokTersedia})`);
+        }
+      }
+      for (const [productId, qty] of qtyByProduct) {
+        const info = await transaction.execute({
+          sql: 'UPDATE master_barang SET stok = stok - ?, updated_at = ? WHERE id = ? AND stok >= ?',
+          args: [qty, now, productId, qty]
+        });
+        if (info.rowsAffected !== 1) {
+          throw new BusinessError(409, 'Stok barang berubah, silakan muat ulang dan coba lagi');
+        }
       }
 
       const temporaryNumber = `TMP-${requestId || crypto.randomUUID()}`;
@@ -265,6 +287,13 @@ router.delete('/:id', async (req, res) => {
       if (!header) throw new BusinessError(404, 'Penjualan tidak ditemukan');
       if (header.voided_at) return { voided: true, already_voided: true };
 
+      // Detail yang belum dibatalkan dipakai untuk mengembalikan stok.
+      const detailsResult = await transaction.execute({
+        sql: 'SELECT id, barang_id, quantity FROM pemasukan WHERE penjualan_id = ? AND voided_at IS NULL',
+        args: [id]
+      });
+      const details = detailsResult.rows;
+
       await transaction.execute({
         sql: 'UPDATE penjualan SET voided_at = ?, void_reason = ? WHERE id = ?',
         args: [now, reason, id]
@@ -276,7 +305,17 @@ router.delete('/:id', async (req, res) => {
         `,
         args: [now, `Penjualan dibatalkan: ${reason}`.slice(0, 200), id]
       });
-      return { voided: true, already_voided: false };
+
+      let stokDikembalikan = 0;
+      for (const detail of details) {
+        if (detail.barang_id == null) continue;
+        await transaction.execute({
+          sql: 'UPDATE master_barang SET stok = stok + ?, updated_at = ? WHERE id = ?',
+          args: [detail.quantity, now, detail.barang_id]
+        });
+        stokDikembalikan += 1;
+      }
+      return { voided: true, already_voided: false, stok_dikembalikan: stokDikembalikan };
     });
     return success(res, result);
   } catch (err) {

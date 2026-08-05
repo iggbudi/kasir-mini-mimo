@@ -166,6 +166,14 @@ router.post('/', async (req, res) => {
         args
       });
 
+      // Stok: tambahkan ke master_barang dalam transaksi yang sama.
+      for (const detail of details) {
+        await transaction.execute({
+          sql: 'UPDATE master_barang SET stok = stok + ?, updated_at = ? WHERE id = ?',
+          args: [detail.quantity, now, detail.barang_id]
+        });
+      }
+
       return getPurchase(transaction, purchaseId);
     });
 
@@ -204,6 +212,8 @@ router.delete('/:id', async (req, res) => {
     const reason = optionalString(req.body?.reason, 'Alasan pembatalan') || 'Dibatalkan oleh admin';
     if (reason.length > 200) return fail(res, 400, 'Alasan pembatalan maksimal 200 karakter');
 
+    const now = getNowWib();
+
     const result = await withWriteTransaction(async (transaction) => {
       const current = await transaction.execute({
         sql: 'SELECT id, voided_at FROM kulakan WHERE id = ?',
@@ -213,10 +223,26 @@ router.delete('/:id', async (req, res) => {
       if (!purchase) throw new BusinessError(404, 'Kulakan tidak ditemukan');
       if (purchase.voided_at) return { voided: true, already_voided: true };
 
+      const itemResult = await transaction.execute({
+        sql: 'SELECT id, barang_id, quantity FROM kulakan_item WHERE kulakan_id = ?',
+        args: [id]
+      });
+      const items = itemResult.rows;
+
       await transaction.execute({
         sql: 'UPDATE kulakan SET voided_at = ?, void_reason = ? WHERE id = ?',
-        args: [getNowWib(), reason, id]
+        args: [now, reason, id]
       });
+
+      // Membalik efek stok kulakan. Stok boleh minus jika barang sudah terjual
+      // (kasus langka); kasir bisa perbaiki via opname.
+      for (const item of items) {
+        if (item.barang_id == null) continue;
+        await transaction.execute({
+          sql: 'UPDATE master_barang SET stok = stok - ?, updated_at = ? WHERE id = ?',
+          args: [item.quantity, now, item.barang_id]
+        });
+      }
       return { voided: true, already_voided: false };
     });
     return success(res, result);

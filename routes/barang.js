@@ -1,21 +1,30 @@
 const express = require('express');
-const { getAll, getOne, run } = require('../db/query');
+const { getAll, getOne, run, withWriteTransaction } = require('../db/query');
 const { success, fail } = require('../utils/response');
 const {
   ValidationError,
   requireString,
   requirePositiveInteger,
   optionalPositiveInteger,
-  requirePositiveId
+  requireNonNegativeInteger,
+  requirePositiveId,
+  optionalString
 } = require('../utils/validate');
 const { getNowWib } = require('../utils/date');
 
 const router = express.Router();
 const VALID_STATUSES = new Set(['aktif', 'arsip', 'semua']);
 const PUBLIC_COLUMNS = `
-  id, nama, harga_retail, harga_grosir,
+  id, nama, harga_retail, harga_grosir, stok,
   aktif, created_at, updated_at, archived_at
 `;
+
+class BusinessError extends Error {
+  constructor(status, message) {
+    super(message);
+    this.status = status;
+  }
+}
 
 function normalizeName(value) {
   return value.trim().replace(/\s+/g, ' ').toLocaleLowerCase('id-ID');
@@ -133,6 +142,44 @@ router.put('/:id', async (req, res) => {
     if (isUniqueError(err)) return fail(res, 409, 'Nama barang sudah terdaftar');
     console.error(err);
     return fail(res, 500, 'Gagal memperbarui barang');
+  }
+});
+
+// Opname / penyesuaian stok manual dengan riwayat.
+router.put('/:id/stok', async (req, res) => {
+  try {
+    const id = requirePositiveId(req.params.id);
+    const stok = requireNonNegativeInteger(req.body?.stok, 'Stok');
+    const catatan = optionalString(req.body?.catatan, 'Catatan opname');
+    if (catatan && catatan.length > 200) throw new ValidationError('Catatan opname maksimal 200 karakter');
+    const now = getNowWib();
+
+    const result = await withWriteTransaction(async (transaction) => {
+      const current = await transaction.execute({
+        sql: 'SELECT id, stok FROM master_barang WHERE id = ?',
+        args: [id]
+      });
+      const row = current.rows[0] || null;
+      if (!row) throw new BusinessError(404, 'ID tidak ditemukan');
+      const stokSebelum = Number(row.stok || 0);
+
+      await transaction.execute({
+        sql: 'INSERT INTO stok_adjustment (barang_id, stok_sebelum, stok_sesudah, catatan) VALUES (?, ?, ?, ?)',
+        args: [id, stokSebelum, stok, catatan]
+      });
+      await transaction.execute({
+        sql: 'UPDATE master_barang SET stok = ?, updated_at = ? WHERE id = ?',
+        args: [stok, now, id]
+      });
+      return { id, stok_sebelum: stokSebelum, stok_sesudah: stok, catatan };
+    });
+
+    return success(res, result);
+  } catch (err) {
+    if (err instanceof ValidationError) return fail(res, 400, err.message);
+    if (err instanceof BusinessError) return fail(res, err.status, err.message);
+    console.error(err);
+    return fail(res, 500, 'Gagal memperbarui stok');
   }
 });
 

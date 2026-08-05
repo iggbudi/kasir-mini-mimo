@@ -49,7 +49,7 @@
         `<option value="${item.id}">${KasirApp.escapeHtml(item.nama)}</option>`
       ).join('');
       barangSelect.innerHTML = '<option value="">Pilih barang</option>' + products.map(item =>
-        `<option value="${item.id}">${KasirApp.escapeHtml(item.nama)}</option>`
+        `<option value="${item.id}">${KasirApp.escapeHtml(item.nama)} (stok ${item.stok ?? 0})</option>`
       ).join('');
       if (!salesmen.length) salesmanSelect.innerHTML = '<option value="">Belum ada salesman aktif</option>';
       if (!products.length) barangSelect.innerHTML = '<option value="">Belum ada barang aktif</option>';

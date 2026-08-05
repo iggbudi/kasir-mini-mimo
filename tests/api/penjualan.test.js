@@ -60,11 +60,21 @@ async function createBarang(nama, hargaRetail, hargaGrosir = null) {
   return body.data.id;
 }
 
+async function setStok(id, stok) {
+  const { res } = await json(`/api/barang/${id}/stok`, {
+    method: 'PUT',
+    headers: { cookie },
+    body: JSON.stringify({ stok })
+  });
+  assert.equal(res.status, 200);
+}
+
 test('setup: login + master barang', async () => {
   cookie = await login();
   assert.ok(cookie);
   barangIds.push(await createBarang('Beras 5kg', 65000, 62000));
   barangIds.push(await createBarang('Minyak 1L', 18000, 17500));
+  for (const id of barangIds) await setStok(id, 100);
   assert.equal(barangIds.length, 2);
 });
 

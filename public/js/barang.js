@@ -46,6 +46,7 @@
       const wholesale = item.harga_grosir
         ? KasirApp.formatRupiah(item.harga_grosir)
         : 'Tidak ada harga grosir';
+      const stok = item.stok ?? 0;
       return `
         <div class="list-item">
           <div class="item-top">
@@ -54,7 +55,9 @@
           </div>
           <div class="meta">Retail: <strong>${KasirApp.formatRupiah(item.harga_retail)}</strong></div>
           <div class="meta">Grosir: ${wholesale}</div>
+          <div class="meta">Stok: <strong>${stok}</strong>${stok === 0 ? ' <span class="badge">Habis</span>' : ''}</div>
           <div class="actions">
+            <button class="secondary btn-sm" data-opname="${item.id}">Isi Stok</button>
             ${item.aktif ? `
               <button class="secondary btn-sm" data-edit="${item.id}">Edit</button>
               <button class="secondary btn-sm" data-archive="${item.id}">Arsipkan</button>
@@ -63,6 +66,31 @@
         </div>
       `;
     }).join('');
+
+    listEl.querySelectorAll('[data-opname]').forEach(button => {
+      button.addEventListener('click', async () => {
+        const item = items.find(product => String(product.id) === String(button.dataset.opname));
+        if (!item) return;
+        const stok = await KasirApp.promptNumber(
+          'Isi Stok',
+          `${KasirApp.escapeHtml(item.nama)} — stok saat ini ${item.stok ?? 0}. Isi angka stok fisik terbaru.`,
+          { defaultValue: item.stok ?? 0, min: 0 }
+        );
+        if (stok === null) return;
+        button.disabled = true;
+        try {
+          await KasirApp.apiFetch(`/api/barang/${item.id}/stok`, {
+            method: 'PUT',
+            body: JSON.stringify({ stok })
+          });
+          KasirApp.showToast('Stok diperbarui');
+          loadData();
+        } catch (err) {
+          button.disabled = false;
+          KasirApp.showToast(err.message || 'Gagal memperbarui stok', 'error');
+        }
+      });
+    });
 
     listEl.querySelectorAll('[data-edit]').forEach(button => {
       button.addEventListener('click', () => startEdit(button.dataset.edit));

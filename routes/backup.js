@@ -19,7 +19,8 @@ router.get('/', async (_req, res) => {
       'SELECT * FROM penjualan ORDER BY id',
       'SELECT * FROM master_salesman ORDER BY id',
       'SELECT * FROM kulakan ORDER BY id',
-      'SELECT * FROM kulakan_item ORDER BY id'
+      'SELECT * FROM kulakan_item ORDER BY id',
+      'SELECT * FROM stok_adjustment ORDER BY id'
     ], 'read');
 
     const schemaVersion = Number(results[0].rows[0]?.version || 0);
@@ -34,6 +35,7 @@ router.get('/', async (_req, res) => {
     const masterSalesman = toPlainRows(results[8]);
     const kulakan = toPlainRows(results[9]);
     const kulakanItem = toPlainRows(results[10]);
+    const stokAdjustment = toPlainRows(results[11]);
     const data = {
       pemasukan,
       pengeluaran,
@@ -44,7 +46,8 @@ router.get('/', async (_req, res) => {
       penjualan,
       master_salesman: masterSalesman,
       kulakan,
-      kulakan_item: kulakanItem
+      kulakan_item: kulakanItem,
+      stok_adjustment: stokAdjustment
     };
     const checksum = crypto.createHash('sha256').update(JSON.stringify(data)).digest('hex');
 
@@ -63,7 +66,8 @@ router.get('/', async (_req, res) => {
         penjualan: penjualan.length,
         master_salesman: masterSalesman.length,
         kulakan: kulakan.length,
-        kulakan_item: kulakanItem.length
+        kulakan_item: kulakanItem.length,
+        stok_adjustment: stokAdjustment.length
       },
       checksum_sha256: checksum,
       ...data

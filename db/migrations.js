@@ -132,6 +132,24 @@ const MIGRATIONS = [
         "TEXT NOT NULL DEFAULT 'retail' CHECK (jenis_harga IN ('retail', 'grosir'))"
       );
     }
+  },
+  {
+    version: 8,
+    name: 'stock_tracking',
+    up: async (transaction) => {
+      await ensureColumn(transaction, 'master_barang', 'stok', 'INTEGER NOT NULL DEFAULT 0');
+      await transaction.execute(`
+        CREATE TABLE IF NOT EXISTS stok_adjustment (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          barang_id INTEGER NOT NULL REFERENCES master_barang(id),
+          stok_sebelum INTEGER NOT NULL,
+          stok_sesudah INTEGER NOT NULL,
+          catatan TEXT,
+          tanggal TEXT NOT NULL DEFAULT (datetime('now', 'localtime'))
+        )
+      `);
+      await transaction.execute('CREATE INDEX IF NOT EXISTS idx_stok_adjustment_barang ON stok_adjustment(barang_id)');
+    }
   }
 ];
 

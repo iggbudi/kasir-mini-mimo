@@ -39,6 +39,20 @@ function optionalPositiveInteger(value, fieldName = 'Field') {
   return requirePositiveInteger(value, fieldName);
 }
 
+function requireNonNegativeInteger(value, fieldName = 'Field') {
+  if (typeof value !== 'number' && typeof value !== 'string') {
+    throw new ValidationError(`${fieldName} harus berupa angka bulat yang valid`);
+  }
+  if (typeof value === 'string' && !/^\d+$/.test(value.trim())) {
+    throw new ValidationError(`${fieldName} harus berupa angka bulat yang valid`);
+  }
+  const num = Number(value);
+  if (!Number.isSafeInteger(num) || num < 0) {
+    throw new ValidationError(`${fieldName} harus berupa angka bulat yang valid`);
+  }
+  return num;
+}
+
 function requirePositiveId(value) {
   const str = String(value ?? '');
   if (!/^[1-9]\d*$/.test(str)) {
@@ -101,6 +115,7 @@ module.exports = {
   requireString,
   requirePositiveInteger,
   optionalPositiveInteger,
+  requireNonNegativeInteger,
   requirePositiveId,
   requireDateRange,
   optionalString,

@@ -12,6 +12,7 @@ const V3_DATA_KEYS = [...LEGACY_DATA_KEYS, 'master_barang'];
 const V4_DATA_KEYS = [...V3_DATA_KEYS, 'penjualan'];
 const V5_DATA_KEYS = [...V4_DATA_KEYS, 'master_salesman'];
 const DATA_KEYS = [...V5_DATA_KEYS, 'kulakan', 'kulakan_item'];
+const V8_DATA_KEYS = [...DATA_KEYS, 'stok_adjustment'];
 const nullable = value => value ?? null;
 
 function readBackup(filename) {
@@ -22,15 +23,17 @@ function readBackup(filename) {
     throw new Error('Format backup tidak dikenali');
   }
   const backupVersion = Number(backup.schema_version);
-  const checksumKeys = backupVersion >= 6
-    ? DATA_KEYS
-    : backupVersion >= 5
-      ? V5_DATA_KEYS
-      : backupVersion >= 4
-        ? V4_DATA_KEYS
-        : backupVersion >= 3
-          ? V3_DATA_KEYS
-          : LEGACY_DATA_KEYS;
+  const checksumKeys = backupVersion >= 8
+    ? V8_DATA_KEYS
+    : backupVersion >= 6
+      ? DATA_KEYS
+      : backupVersion >= 5
+        ? V5_DATA_KEYS
+        : backupVersion >= 4
+          ? V4_DATA_KEYS
+          : backupVersion >= 3
+            ? V3_DATA_KEYS
+            : LEGACY_DATA_KEYS;
   for (const key of checksumKeys) {
     if (!Array.isArray(backup[key])) throw new Error(`Data backup ${key} tidak valid`);
     if (Number(backup.counts?.[key]) !== backup[key].length) {
@@ -47,6 +50,7 @@ function readBackup(filename) {
   if (!Array.isArray(backup.master_salesman)) backup.master_salesman = [];
   if (!Array.isArray(backup.kulakan)) backup.kulakan = [];
   if (!Array.isArray(backup.kulakan_item)) backup.kulakan_item = [];
+  if (!Array.isArray(backup.stok_adjustment)) backup.stok_adjustment = [];
   return backup;
 }
 
@@ -58,6 +62,7 @@ async function restoreBackup(backup) {
   }
 
   const statements = [
+    'DELETE FROM stok_adjustment',
     'DELETE FROM kulakan_item',
     'DELETE FROM kulakan',
     'DELETE FROM kasbon_bayar',
@@ -88,14 +93,29 @@ async function restoreBackup(backup) {
     statements.push({
       sql: `
         INSERT INTO master_barang
-          (id, nama, nama_normalized, harga_retail, harga_grosir,
+          (id, nama, nama_normalized, harga_retail, harga_grosir, stok,
            aktif, created_at, updated_at, archived_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `,
       args: [
         row.id, row.nama, row.nama_normalized, row.harga_retail,
-        nullable(row.harga_grosir), row.aktif,
+        nullable(row.harga_grosir), Number.isInteger(row.stok) ? row.stok : 0,
+        row.aktif,
         row.created_at, row.updated_at, nullable(row.archived_at)
+      ]
+    });
+  }
+
+  for (const row of backup.stok_adjustment) {
+    statements.push({
+      sql: `
+        INSERT INTO stok_adjustment
+          (id, barang_id, stok_sebelum, stok_sesudah, catatan, tanggal)
+        VALUES (?, ?, ?, ?, ?, ?)
+      `,
+      args: [
+        row.id, row.barang_id, row.stok_sebelum, row.stok_sesudah,
+        nullable(row.catatan), row.tanggal
       ]
     });
   }

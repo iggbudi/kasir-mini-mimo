@@ -1329,6 +1329,10 @@ button[data-loading="true"] .btn-label { opacity: 0.85; }
   color: var(--warning);
 }
 
+.product-browser__item-stok {
+  color: var(--ink-muted);
+}
+
 .product-browser__item-action {
   flex-shrink: 0;
 }

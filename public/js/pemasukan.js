@@ -84,6 +84,11 @@
     closeProductOptions();
     errorEl.textContent = '';
     applySelectedPrice();
+    const stok = product.stok ?? 0;
+    quantityInput.max = String(stok);
+    if (stok === 0) {
+      errorEl.textContent = `Stok ${product.nama} habis, tidak bisa dijual`;
+    }
   }
 
   function renderProductOptions(items) {
@@ -96,10 +101,11 @@
       const price = jenisHargaSelect.value === 'grosir' && item.harga_grosir
         ? item.harga_grosir
         : item.harga_retail;
+      const stok = item.stok ?? 0;
       return `
         <button type="button" class="product-option" role="option" data-product-id="${item.id}">
           <span class="product-option__name">${KasirApp.escapeHtml(item.nama)}</span>
-          <span class="product-option__price">${KasirApp.formatRupiah(price)}</span>
+          <span class="product-option__price">${KasirApp.formatRupiah(price)} · Stok ${stok}</span>
         </button>
       `;
     }).join('');
@@ -187,6 +193,7 @@
             <div class="product-browser__item-prices">
               <span class="product-browser__item-retail">Retail: ${KasirApp.formatRupiah(retailPrice)}</span>
               ${hasGrosir ? `<span class="product-browser__item-grosir">Grosir: ${KasirApp.formatRupiah(grosirPrice)}</span>` : ''}
+              <span class="product-browser__item-stok">Stok: ${item.stok ?? 0}</span>
             </div>
           </div>
           <div class="product-browser__item-action">
@@ -432,6 +439,18 @@
     const price = parseInt(hargaInput.value, 10) || 0;
     if (!product || quantity < 1 || price < 1) {
       errorEl.textContent = 'Pilih barang, quantity, dan harga yang valid';
+      return;
+    }
+
+    const stok = product.stok ?? 0;
+    if (stok === 0) {
+      errorEl.textContent = `Stok ${product.nama} habis, tidak bisa dijual`;
+      return;
+    }
+    if (quantity > stok) {
+      errorEl.textContent = `Stok ${product.nama} tinggal ${stok}. Jumlah dibatasi ke stok tersedia.`;
+      quantityInput.value = String(stok);
+      updateSubtotal();
       return;
     }
 

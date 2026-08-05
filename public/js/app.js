@@ -206,6 +206,51 @@ function promptText(title, message, placeholder = 'Tuliskan alasan', maxLength =
 
 // === Custom Prompt Modal (for kasbon bayar) ===
 
+function promptNumber(title, message, { defaultValue = 0, min = 0, max = '', placeholder = 'Masukkan angka' } = {}) {
+  return new Promise((resolve) => {
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+
+    overlay.innerHTML = `
+      <div class="modal">
+        <h3 class="modal-title">${escapeHtml(title)}</h3>
+        <p class="modal-message">${escapeHtml(message)}</p>
+        <label style="margin-top:0;">Jumlah</label>
+        <input type="number" id="promptNumberValue" min="${min}" ${max !== '' ? `max="${max}"` : ''} value="${Number(defaultValue) || 0}" inputmode="numeric" placeholder="${escapeHtml(placeholder)}" style="min-height:48px;">
+        <p class="form-error" id="promptNumberError"></p>
+        <div class="modal-actions mt-3">
+          <button class="secondary" data-action="cancel">Batal</button>
+          <button class="primary" data-action="ok">Simpan</button>
+        </div>
+      </div>
+    `;
+
+    const input = overlay.querySelector('#promptNumberValue');
+    const errorEl = overlay.querySelector('#promptNumberError');
+
+    function close(result) {
+      overlay.remove();
+      resolve(result);
+    }
+
+    overlay.querySelector('[data-action="ok"]').addEventListener('click', () => {
+      const val = parseInt(input.value, 10);
+      const valid = Number.isInteger(val) && val >= min && (max === '' || val <= Number(max));
+      if (!valid) {
+        errorEl.textContent = `Masukkan angka bulat minimal ${min}`;
+        return;
+      }
+      close(val);
+    });
+    overlay.querySelector('[data-action="cancel"]').addEventListener('click', () => close(null));
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) close(null); });
+
+    document.body.appendChild(overlay);
+    input.focus();
+    input.select();
+  });
+}
+
 function promptRupiah(title, message, maxAmount) {
   return new Promise((resolve) => {
     const overlay = document.createElement('div');
@@ -424,6 +469,7 @@ window.KasirApp = {
   showToast,
   confirmDialog,
   promptText,
+  promptNumber,
   promptRupiah,
   renderBottomNav,
   showLoading,
