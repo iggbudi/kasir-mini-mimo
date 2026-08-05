@@ -63,5 +63,5 @@ test('GET ringkasan mengembalikan struktur lengkap', async () => {
   assert.ok(typeof body.data.pengeluaran === 'number');
   assert.ok(typeof body.data.sisa_kas === 'number');
   assert.ok(typeof body.data.kasbon_outstanding === 'number');
-  assert.ok(typeof body.data.kasbon_jumlah_orang === 'number');
+  assert.ok(typeof body.data.kasbon_aktif === 'number');
 });

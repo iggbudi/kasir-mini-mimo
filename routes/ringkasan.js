@@ -83,9 +83,7 @@ router.get('/', async (_req, res) => {
       total_kas_keluar: totalKasKeluar,
       sisa_kas: sisaKas,
       kasbon_outstanding: kasbonOutstanding,
-      kasbon_aktif: kasbonAktif,
-      // Alias kompatibilitas; nilainya adalah jumlah record kasbon aktif, bukan orang unik.
-      kasbon_jumlah_orang: kasbonAktif
+      kasbon_aktif: kasbonAktif
     });
   } catch (err) {
     console.error(err);

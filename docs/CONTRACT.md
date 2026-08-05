@@ -368,7 +368,7 @@ Field utama:
 | `kasbon_outstanding` | Total sisa seluruh kasbon aktif |
 | `kasbon_aktif` | Jumlah record kasbon yang belum lunas |
 
-Field `pemasukan` tetap tersedia sebagai alias `pemasukan_penjualan` untuk kompatibilitas client lama. Field `kasbon_jumlah_orang` tetap tersedia sebagai alias `kasbon_aktif`, tetapi tidak menyatakan jumlah pelanggan unik.
+Field `pemasukan` tetap tersedia sebagai alias `pemasukan_penjualan` untuk kompatibilitas client lama. Field `kasbon_aktif` menyatakan jumlah record kasbon yang belum lunas (bukan jumlah pelanggan unik).
 
 ### GET `/api/riwayat?dari=&sampai=`
 

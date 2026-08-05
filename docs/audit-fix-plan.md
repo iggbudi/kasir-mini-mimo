@@ -251,4 +251,4 @@ Dicatat untuk sprint berikutnya, urut prioritas:
 | M4 | ~~`bcrypt.compare` async (ganti `compareSync`)~~ | **DONE** — `routes/auth.js` pakai `await bcrypt.compare`; `db/init.js` pakai `await bcrypt.hash`. Tidak ada panggilan sync tersisa |
 | M5 | ~~Pindah `playwright` ke `devDependencies`~~ | **DONE** — package.json + package-lock.json (root devDependencies); JSON tervalidasi |
 | M6 | ~~Perbaiki error handling `routes/setting.js`~~ | **DONE** — `instanceof ValidationError` menggantikan string matching |
-| M7 | Rename `kasbon_jumlah_orang` → `kasbon_aktif` (drop alias) | Field saat ini menyesatkan; perlu sinkronisasi client |
+| M7 | ~~Rename `kasbon_jumlah_orang` → `kasbon_aktif` (drop alias)~~ | **DONE** — alias dihapus dari `routes/ringkasan.js`; tidak ada pemakaian di frontend; test + CONTRACT disinkronkan |
