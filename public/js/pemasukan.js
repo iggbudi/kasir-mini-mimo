@@ -84,11 +84,7 @@
     closeProductOptions();
     errorEl.textContent = '';
     applySelectedPrice();
-    const stok = product.stok ?? 0;
-    quantityInput.max = String(stok);
-    if (stok === 0) {
-      errorEl.textContent = `Stok ${product.nama} habis, tidak bisa dijual`;
-    }
+    quantityInput.removeAttribute('max');
   }
 
   function renderProductOptions(items) {
@@ -439,18 +435,6 @@
     const price = parseInt(hargaInput.value, 10) || 0;
     if (!product || quantity < 1 || price < 1) {
       errorEl.textContent = 'Pilih barang, quantity, dan harga yang valid';
-      return;
-    }
-
-    const stok = product.stok ?? 0;
-    if (stok === 0) {
-      errorEl.textContent = `Stok ${product.nama} habis, tidak bisa dijual`;
-      return;
-    }
-    if (quantity > stok) {
-      errorEl.textContent = `Stok ${product.nama} tinggal ${stok}. Jumlah dibatasi ke stok tersedia.`;
-      quantityInput.value = String(stok);
-      updateSubtotal();
       return;
     }
 

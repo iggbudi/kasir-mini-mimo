@@ -88,7 +88,7 @@ test('penjualan mengurangi stok sesuai quantity', async () => {
   assert.equal(await stokBarang(), 7);
 });
 
-test('penjualan melebihi stok → 409, stok tidak berubah', async () => {
+test('penjualan melebihi stok tetap diperbolehkan, stok jadi minus', async () => {
   const sale = await json('/api/penjualan', {
     method: 'POST',
     headers: { cookie },
@@ -97,8 +97,15 @@ test('penjualan melebihi stok → 409, stok tidak berubah', async () => {
       items: [{ barang_id: barangId, quantity: 10, harga: 17000 }]
     })
   });
-  assert.equal(sale.res.status, 409);
-  assert.match(sale.body.message, /stok .* tidak cukup/i);
+  assert.equal(sale.res.status, 201);
+  assert.equal(await stokBarang(), -3);
+
+  // Kembalikan stok ke 7 dengan opname supaya test berikutnya tidak terpengaruh.
+  await json(`/api/barang/${barangId}/stok`, {
+    method: 'PUT',
+    headers: { cookie },
+    body: JSON.stringify({ stok: 7 })
+  });
   assert.equal(await stokBarang(), 7);
 });
 

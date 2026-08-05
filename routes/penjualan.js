@@ -154,26 +154,17 @@ router.post('/', async (req, res) => {
         details.push({ ...item, nama: product.nama });
       }
 
-      // Stok: validasi kecukupan lalu kurangi dalam transaksi yang sama.
+      // Stok: kurangi dalam transaksi yang sama. Stok boleh minus (mis. barang
+      // dijual lebih dulu, diinput ke sistem belakangan).
       const qtyByProduct = new Map();
       for (const detail of details) {
         qtyByProduct.set(detail.barang_id, (qtyByProduct.get(detail.barang_id) || 0) + detail.quantity);
       }
       for (const [productId, qty] of qtyByProduct) {
-        const product = productById.get(productId);
-        const stokTersedia = Number(product?.stok || 0);
-        if (stokTersedia < qty) {
-          throw new BusinessError(409, `Stok ${product.nama} tidak cukup (sisa ${stokTersedia})`);
-        }
-      }
-      for (const [productId, qty] of qtyByProduct) {
-        const info = await transaction.execute({
-          sql: 'UPDATE master_barang SET stok = stok - ?, updated_at = ? WHERE id = ? AND stok >= ?',
-          args: [qty, now, productId, qty]
+        await transaction.execute({
+          sql: 'UPDATE master_barang SET stok = stok - ?, updated_at = ? WHERE id = ?',
+          args: [qty, now, productId]
         });
-        if (info.rowsAffected !== 1) {
-          throw new BusinessError(409, 'Stok barang berubah, silakan muat ulang dan coba lagi');
-        }
       }
 
       const temporaryNumber = `TMP-${requestId || crypto.randomUUID()}`;
