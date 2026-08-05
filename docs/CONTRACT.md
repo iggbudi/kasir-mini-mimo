@@ -34,6 +34,7 @@ Error:
 - Masa session: 12 jam default via `SESSION_HOURS`.
 - Error login salah harus generik: `Username atau password salah`.
 - Semua `/api/*` selain auth dan health wajib login.
+- Password default `admin123` HANYA untuk lingkungan lokal. Saat `NODE_ENV=production`, `db:init` gagal jika `ADMIN_PASSWORD` tidak diset.
 
 ## Endpoints
 
@@ -488,6 +489,7 @@ Error:
 - Masa session: 12 jam default via `SESSION_HOURS`.
 - Error login salah harus generik: `Username atau password salah`.
 - Semua `/api/*` selain auth dan health wajib login.
+- Password default `admin123` HANYA untuk lingkungan lokal. Saat `NODE_ENV=production`, `db:init` gagal jika `ADMIN_PASSWORD` tidak diset.
 
 ## Endpoints
 

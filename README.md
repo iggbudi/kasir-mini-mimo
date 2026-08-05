@@ -85,7 +85,7 @@ Setelah deploy pertama kali, jalankan init via Vercel:
 ```bash
 # Atau buka endpoint init manual (jika ditambahkan)
 ```
-Database akan ter-inisialisasi otomatis saat build via `vercel-build` script. Jika `ADMIN_PASSWORD` diubah, deploy ulang agar hash password admin ikut diperbarui.
+Database akan ter-inisialisasi otomatis saat build via `vercel-build` script. **Build production GAGAL jika `ADMIN_PASSWORD` tidak diset** (safety net — tidak lagi memakai default `admin123`). Jika `ADMIN_PASSWORD` diubah, deploy ulang agar hash password admin ikut diperbarui.
 
 ## Environment Variables
 
@@ -96,7 +96,7 @@ Database akan ter-inisialisasi otomatis saat build via `vercel-build` script. Ji
 | `PORT` | Tidak | `3000` | Port server lokal |
 | `SESSION_HOURS` | Tidak | `12` | Durasi session (jam) |
 | `ADMIN_USERNAME` | Tidak | `admin` | Username admin |
-| `ADMIN_PASSWORD` | Ya (prod) | `admin123` | Password admin |
+| `ADMIN_PASSWORD` | Ya (prod) | - | Password admin. **Build production gagal jika kosong** (bukan default `admin123`) |
 | `NODE_ENV` | Tidak | - | Set `production` di Vercel |
 
 ## Scripts

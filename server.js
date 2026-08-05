@@ -67,14 +67,22 @@ app.use('/api/backup', requireAuth, backupRoutes);
 // Catch-all untuk endpoint /api yang belum ada
 app.use('/api', requireAuth, (_req, res) => fail(res, 404, 'Endpoint tidak ditemukan'));
 
-app.get(['/login', '/login.html'], (_req, res) => {
-  res.sendFile(path.join(publicDir, 'login.html'));
+const PUBLIC_PAGES = {
+  '/login': 'login.html',
+  '/login.html': 'login.html',
+  '/demo.html': 'demo.html'
+};
+
+app.get(Object.keys(PUBLIC_PAGES), (req, res) => {
+  res.sendFile(path.join(publicDir, PUBLIC_PAGES[req.path]));
 });
 
 app.use((req, res, next) => {
   const isPublicAsset =
     req.path.startsWith('/css/') ||
     req.path.startsWith('/js/') ||
+    req.path === '/manifest.json' ||
+    req.path === '/sw.js' ||
     /\.(?:ico|png|jpe?g|gif|webp|svg)$/i.test(req.path);
 
   if (isPublicAsset) return next();

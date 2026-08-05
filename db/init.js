@@ -100,15 +100,24 @@ async function initDb() {
   await run('INSERT OR IGNORE INTO setting (key, value) VALUES (?, ?)', ['timezone', 'Asia/Jakarta'])
 
   const username = process.env.ADMIN_USERNAME || 'admin';
-  const password = process.env.ADMIN_PASSWORD || 'admin123';
   const existing = await getOne('SELECT id FROM admin_user WHERE username = ?', [username]);
+
+  // Safety net production: jangan pernah membuat admin default tanpa password eksplisit.
+  if (!existing && process.env.NODE_ENV === 'production' && !process.env.ADMIN_PASSWORD) {
+    throw new Error(
+      'ADMIN_PASSWORD wajib diset saat production. ' +
+      'Jalankan: vercel env add ADMIN_PASSWORD, lalu deploy ulang.'
+    );
+  }
+
+  const password = process.env.ADMIN_PASSWORD || 'admin123';
 
   if (!existing) {
     const passwordHash = bcrypt.hashSync(password, 12);
     await run('INSERT INTO admin_user (username, password_hash) VALUES (?, ?)', [username, passwordHash]);
     console.log(`Admin user dibuat: ${username}`);
     if (!process.env.ADMIN_PASSWORD) {
-      console.warn('PERINGATAN: ADMIN_PASSWORD tidak diset. Password default: admin123. Ganti untuk production.');
+      console.warn('PERINGATAN: ADMIN_PASSWORD tidak diset. Password default: admin123. Hanya untuk pengembangan lokal.');
     }
   } else {
     if (process.env.ADMIN_PASSWORD) {
