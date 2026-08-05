@@ -1,7 +1,7 @@
 const express = require('express');
 const { getAll, run } = require('../db/query');
 const { success, fail } = require('../utils/response');
-const { requireString } = require('../utils/validate');
+const { ValidationError, requireString } = require('../utils/validate');
 
 const router = express.Router();
 
@@ -43,9 +43,7 @@ router.put('/', async (req, res) => {
       timezone: settings.timezone || 'Asia/Jakarta'
     });
   } catch (err) {
-    if (err.message.includes('wajib diisi') || err.message.includes('harus')) {
-      return fail(res, 400, err.message);
-    }
+    if (err instanceof ValidationError) return fail(res, 400, err.message);
     console.error(err);
     return fail(res, 500, 'Gagal memperbarui pengaturan');
   }
