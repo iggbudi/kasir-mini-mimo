@@ -245,7 +245,7 @@ Dicatat untuk sprint berikutnya, urut prioritas:
 
 | ID | Item | Catatan |
 |----|------|---------|
-| M1 | Test API untuk `barang`, `salesman`, `kulakan`, `penjualan` | Fitur master-detail paling kompleks tanpa jaring pengaman |
+| M1 | ~~Test API untuk `barang`, `salesman`, `kulakan`, `penjualan`~~ | **DONE** — 4 file test baru (`barang`, `salesman`, `kulakan`, `penjualan`), total suite 103 test. Belum dieksekusi di Termux (libsql tolak Android); hanya `node --check`. Commit belum dibuat |
 | M2 | Rate limiting / lockout pada `/api/auth/login` | Counter in-memory cukup untuk 1 instance Vercel |
 | M3 | CSP parsial: `self` + `fonts.googleapis.com` + `fonts.gstatic.com` | Ganti `contentSecurityPolicy: false` |
 | M4 | `bcrypt.compare` async (ganti `compareSync`) | Hilangkan blocking event loop |

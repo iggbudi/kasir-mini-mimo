@@ -104,7 +104,7 @@ Database akan ter-inisialisasi otomatis saat build via `vercel-build` script. **
 - `npm run dev`: Jalankan dengan auto-reload
 - `npm run db:init`: Inisialisasi schema dan jalankan migration database
 - `npm run db:restore -- path/backup.json`: Restore backup JSON (wajib `RESTORE_CONFIRM=RESTORE_KASIR_MINI`)
-- `npm test`: Jalankan semua test API (40 tests)
+- `npm test`: Jalankan semua test API & UI (103 tests)
 - `npm run vercel-build`: Init database saat build Vercel. Build akan gagal jika production tidak memakai Turso remote.
 
 ## Struktur
