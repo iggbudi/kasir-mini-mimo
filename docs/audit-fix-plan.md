@@ -248,7 +248,7 @@ Dicatat untuk sprint berikutnya, urut prioritas:
 | M1 | ~~Test API untuk `barang`, `salesman`, `kulakan`, `penjualan`~~ | **DONE** — 4 file test baru (`barang`, `salesman`, `kulakan`, `penjualan`), total suite 103 test. Belum dieksekusi di Termux (libsql tolak Android); hanya `node --check`. Commit belum dibuat |
 | M2 | ~~Rate limiting / lockout pada `/api/auth/login`~~ | **DONE** — `middleware/rate-limit.js` (in-memory per instance, env-configurable), `trust proxy` di server.js, test `tests/api/rate-limit.test.js`. Respons 429 + `Retry-After`; hanya kegagalan kredensial yang dihitung, sukses mereset. Commit belum dibuat |
 | M3 | ~~CSP parsial: `self` + `fonts.googleapis.com` + `fonts.gstatic.com`~~ | **DONE** — helmet CSP diaktifkan di server.js (default-src 'self', script/style 'unsafe-inline' karena 9 halaman inline, connect-src 'self', object-src none, frame-ancestors 'self'). Test header CSP di public-pages.test.js. Commit belum dibuat |
-| M4 | `bcrypt.compare` async (ganti `compareSync`) | Hilangkan blocking event loop |
-| M5 | Pindah `playwright` ke `devDependencies` | Kecilkan install production |
-| M6 | Perbaiki error handling `routes/setting.js` | Ganti string matching dengan `instanceof ValidationError` |
+| M4 | ~~`bcrypt.compare` async (ganti `compareSync`)~~ | **DONE** — `routes/auth.js` pakai `await bcrypt.compare`; `db/init.js` pakai `await bcrypt.hash`. Tidak ada panggilan sync tersisa |
+| M5 | ~~Pindah `playwright` ke `devDependencies`~~ | **DONE** — package.json + package-lock.json (root devDependencies); JSON tervalidasi |
+| M6 | ~~Perbaiki error handling `routes/setting.js`~~ | **DONE** — `instanceof ValidationError` menggantikan string matching |
 | M7 | Rename `kasbon_jumlah_orang` → `kasbon_aktif` (drop alias) | Field saat ini menyesatkan; perlu sinkronisasi client |
