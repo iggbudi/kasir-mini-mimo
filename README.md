@@ -95,6 +95,9 @@ Database akan ter-inisialisasi otomatis saat build via `vercel-build` script. **
 | `TURSO_AUTH_TOKEN` | Untuk remote | - | Auth token Turso |
 | `PORT` | Tidak | `3000` | Port server lokal |
 | `SESSION_HOURS` | Tidak | `12` | Durasi session (jam) |
+| `LOGIN_MAX_ATTEMPTS` | Tidak | `5` | Percobaan login gagal sebelum lockout (per IP) |
+| `LOGIN_WINDOW_SEC` | Tidak | `900` | Durasi window pencacah percobaan (detik) |
+| `LOGIN_LOCK_SEC` | Tidak | `900` | Durasi lockout setelah ambang tercapai (detik) |
 | `ADMIN_USERNAME` | Tidak | `admin` | Username admin |
 | `ADMIN_PASSWORD` | Ya (prod) | - | Password admin. **Build production gagal jika kosong** (bukan default `admin123`) |
 | `NODE_ENV` | Tidak | - | Set `production` di Vercel |

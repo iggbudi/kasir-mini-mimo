@@ -2,6 +2,7 @@ const express = require('express');
 const bcrypt = require('bcryptjs');
 const { getOne } = require('../db/query');
 const { success, fail } = require('../utils/response');
+const { loginLimiter, formatLockMessage } = require('../middleware/rate-limit');
 const {
   SESSION_COOKIE,
   createSession,
@@ -14,6 +15,13 @@ const {
 const router = express.Router();
 
 router.post('/login', async (req, res) => {
+  const clientIp = req.ip || 'unknown';
+  const limitStatus = loginLimiter.check(clientIp);
+  if (!limitStatus.allowed) {
+    res.setHeader('Retry-After', String(limitStatus.retryAfterSec));
+    return fail(res, 429, formatLockMessage(limitStatus.retryAfterSec));
+  }
+
   const username = String(req.body?.username || '').trim();
   const password = String(req.body?.password || '');
 
@@ -23,8 +31,12 @@ router.post('/login', async (req, res) => {
   try {
     const user = await getOne('SELECT id, username, password_hash FROM admin_user WHERE username = ?', [username]);
     const valid = user ? bcrypt.compareSync(password, user.password_hash) : false;
-    if (!valid) return fail(res, 401, 'Username atau password salah');
+    if (!valid) {
+      loginLimiter.recordFailure(clientIp);
+      return fail(res, 401, 'Username atau password salah');
+    }
 
+    loginLimiter.recordSuccess(clientIp);
     const session = await createSession(user.id);
     setSessionCookie(res, session.token);
     return success(res, { username: user.username });
