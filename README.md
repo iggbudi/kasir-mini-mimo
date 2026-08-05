@@ -160,7 +160,8 @@ npm test
 
 ## Tech Stack
 - **Backend**: Express.js, @libsql/client (Turso)
-- **Auth**: Cookie session, bcryptjs
+- **Auth**: Cookie session, bcryptjs, rate limit login (in-memory)
+- **Security**: helmet + CSP parsial (blokir exfiltration/plugin/clickjacking)
 - **Frontend**: Vanilla HTML/CSS/JS (no framework)
 - **Database**: Turso (libSQL/SQLite)
 - **Deploy**: Vercel (serverless)

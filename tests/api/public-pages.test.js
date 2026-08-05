@@ -54,6 +54,22 @@ test('GET /login.html tanpa login → 200 HTML', async () => {
   assert.match(res.headers.get('content-type'), /text\/html/);
 });
 
+test('CSP header hadir di halaman publik dengan direktif inti', async () => {
+  const res = await fetch(`${baseUrl}/login.html`, { redirect: 'manual' });
+  const csp = res.headers.get('content-security-policy') || '';
+  assert.match(csp, /default-src 'self'/);
+  assert.match(csp, /script-src 'self' 'unsafe-inline'/);
+  assert.match(csp, /font-src 'self' https:\/\/fonts\.gstatic\.com/);
+  assert.match(csp, /object-src 'none'/);
+  assert.match(csp, /frame-ancestors 'self'/);
+});
+
+test('CSP header juga hadir di respons API', async () => {
+  const res = await fetch(`${baseUrl}/api/health`);
+  assert.equal(res.status, 200);
+  assert.ok(res.headers.get('content-security-policy'));
+});
+
 test('GET /pemasukan.html tanpa login tetap redirect (proteksi utuh)', async () => {
   const res = await fetch(`${baseUrl}/pemasukan.html`, { redirect: 'manual' });
   assert.equal(res.status, 302);

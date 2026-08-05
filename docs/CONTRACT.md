@@ -36,6 +36,7 @@ Error:
 - Semua `/api/*` selain auth dan health wajib login.
 - Password default `admin123` HANYA untuk lingkungan lokal. Saat `NODE_ENV=production`, `db:init` gagal jika `ADMIN_PASSWORD` tidak diset.
 - Rate limit login: maksimal `LOGIN_MAX_ATTEMPTS` (default 5) percobaan gagal per IP dalam `LOGIN_WINDOW_SEC` (default 900), lalu lockout `LOGIN_LOCK_SEC` (default 900) dengan respons 429 + header `Retry-After`. Hanya kegagalan kredensial yang dihitung; error validasi (400) tidak. Login sukses mereset catatan IP. State in-memory per instance server.
+- CSP parsial aktif (helmet): `default-src 'self'`; `script-src 'self' 'unsafe-inline'` (9 halaman memakai skrip inline); `style-src` inline + `fonts.googleapis.com`; `font-src` + `fonts.gstatic.com`; `connect-src 'self'` (blokir exfiltration); `object-src 'none'`; `base-uri 'self'`; `form-action 'self'`; `frame-ancestors 'self'` (anti-clickjacking).
 
 ## Endpoints
 
@@ -492,6 +493,7 @@ Error:
 - Semua `/api/*` selain auth dan health wajib login.
 - Password default `admin123` HANYA untuk lingkungan lokal. Saat `NODE_ENV=production`, `db:init` gagal jika `ADMIN_PASSWORD` tidak diset.
 - Rate limit login: maksimal `LOGIN_MAX_ATTEMPTS` (default 5) percobaan gagal per IP dalam `LOGIN_WINDOW_SEC` (default 900), lalu lockout `LOGIN_LOCK_SEC` (default 900) dengan respons 429 + header `Retry-After`. Hanya kegagalan kredensial yang dihitung; error validasi (400) tidak. Login sukses mereset catatan IP. State in-memory per instance server.
+- CSP parsial aktif (helmet): `default-src 'self'`; `script-src 'self' 'unsafe-inline'` (9 halaman memakai skrip inline); `style-src` inline + `fonts.googleapis.com`; `font-src` + `fonts.gstatic.com`; `connect-src 'self'` (blokir exfiltration); `object-src 'none'`; `base-uri 'self'`; `form-action 'self'`; `frame-ancestors 'self'` (anti-clickjacking).
 
 ## Endpoints
 

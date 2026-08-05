@@ -27,7 +27,25 @@ const publicDir = path.join(__dirname, 'public');
 // req.ip akurat (dipakai rate limit login).
 app.set('trust proxy', 1);
 
-app.use(helmet({ contentSecurityPolicy: false }));
+// CSP parsial: blokir skrip eksternal/injection ke domain lain, plugin,
+// clickjacking, dan pengiriman form ke luar. 'unsafe-inline' tetap diizinkan
+// karena 9 halaman memakai inline <script>/onclick/style (lihat audit M3).
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'"],
+      styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
+      fontSrc: ["'self'", 'https://fonts.gstatic.com'],
+      imgSrc: ["'self'", 'data:'],
+      connectSrc: ["'self'"],
+      objectSrc: ["'none'"],
+      baseUri: ["'self'"],
+      formAction: ["'self'"],
+      frameAncestors: ["'self'"]
+    }
+  }
+}));
 app.use(express.json({ limit: '50kb' }));
 app.use(express.urlencoded({ extended: false, limit: '50kb' }));
 app.use(cookieParser());
