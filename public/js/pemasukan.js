@@ -74,8 +74,7 @@
     openProductOptions();
   }
 
-  function selectProduct(id) {
-    const product = masterBarang.find(item => String(item.id) === String(id));
+  function selectProduct(product) {
     if (!product) return;
     clearTimeout(productSearchTimer);
     productSearchSequence += 1;
@@ -83,7 +82,7 @@
     barangSearchInput.value = product.nama;
     closeProductOptions();
     errorEl.textContent = '';
-    applySelectedPrice();
+    applySelectedPrice(product);
     quantityInput.removeAttribute('max');
   }
 
@@ -107,7 +106,10 @@
     }).join('');
 
     barangOptions.querySelectorAll('[data-product-id]').forEach(button => {
-      button.addEventListener('click', () => selectProduct(button.dataset.productId));
+      button.addEventListener('click', () => {
+        const product = masterBarang.find(item => String(item.id) === String(button.dataset.productId));
+        selectProduct(product);
+      });
     });
     openProductOptions();
   }
@@ -219,13 +221,12 @@
     const product = allProductsCache.find(item => String(item.id) === String(productId));
     if (!product) return;
 
-    selectProduct(product.id);
+    selectProduct(product);
     closeProductBrowser();
     quantityInput.focus();
   }
 
-  function applySelectedPrice() {
-    const product = selectedProduct();
+  function applySelectedPrice(product) {
     if (!product) {
       hargaInput.value = '';
       updateSubtotal();
@@ -507,7 +508,10 @@
   });
 
   jenisHargaSelect.addEventListener('change', () => {
-    applySelectedPrice();
+    const product = selectedProduct()
+      || allProductsCache.find(item => String(item.id) === barangIdInput.value)
+      || null;
+    applySelectedPrice(product);
     if (!barangOptions.classList.contains('hidden') && masterBarang.length > 0) {
       renderProductOptions(masterBarang);
     }
