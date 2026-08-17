@@ -1366,25 +1366,41 @@ button[data-loading="true"] .btn-label { opacity: 0.85; }
 
 /* === Stock Management (Master Barang) === */
 
+/* Filter stok: grid responsif. Di hape: Cari (baris 1), Status+Kondisi
+   (baris 2), Batas Minimum (baris 3). Di layar lebar: satu baris penuh. */
 .stock-filter {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: 1fr;
   gap: 12px;
 }
 
-.stock-filter__search {
-  width: 100%;
+.stock-filter__status,
+.stock-filter__kondisi {
+  grid-column: span 1;
 }
 
-/* Kontrol (Status/Kondisi/Batas) tetap 3 kolom di layar lebar dan mengecil
-   rapi di layar sempit tanpa berhimpitan. */
-.stock-filter__controls {
-  align-items: end;
+@media (min-width: 420px) {
+  .stock-filter {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .stock-filter__search,
+  .stock-filter__batas {
+    grid-column: span 2;
+  }
 }
 
-@media (max-width: 480px) {
-  .stock-filter__controls .stock-limit-control {
-    flex-wrap: wrap;
+@media (min-width: 760px) {
+  .stock-filter {
+    grid-template-columns: 2fr 1fr 1fr 1.4fr;
+    align-items: end;
+  }
+
+  .stock-filter__search,
+  .stock-filter__status,
+  .stock-filter__kondisi,
+  .stock-filter__batas {
+    grid-column: span 1;
   }
 }
 
