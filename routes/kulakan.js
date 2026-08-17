@@ -11,6 +11,7 @@ const {
   optionalRequestId
 } = require('../utils/validate');
 const { getTodayWib, getNowWib } = require('../utils/date');
+const { updateStockWithMutation } = require('../utils/stock');
 
 const router = express.Router();
 
@@ -166,11 +167,18 @@ router.post('/', async (req, res) => {
         args
       });
 
-      // Stok: tambahkan ke master_barang dalam transaksi yang sama.
+      const qtyByProduct = new Map();
       for (const detail of details) {
-        await transaction.execute({
-          sql: 'UPDATE master_barang SET stok = stok + ?, updated_at = ? WHERE id = ?',
-          args: [detail.quantity, now, detail.barang_id]
+        qtyByProduct.set(detail.barang_id, (qtyByProduct.get(detail.barang_id) || 0) + detail.quantity);
+      }
+      for (const [productId, quantity] of qtyByProduct) {
+        await updateStockWithMutation(transaction, {
+          barangId: productId,
+          mode: 'delta',
+          amount: quantity,
+          type: 'kulakan',
+          referenceId: purchaseId,
+          timestamp: now
         });
       }
 
@@ -234,13 +242,20 @@ router.delete('/:id', async (req, res) => {
         args: [now, reason, id]
       });
 
-      // Membalik efek stok kulakan. Stok boleh minus jika barang sudah terjual
-      // (kasus langka); kasir bisa perbaiki via opname.
+      const qtyByProduct = new Map();
       for (const item of items) {
         if (item.barang_id == null) continue;
-        await transaction.execute({
-          sql: 'UPDATE master_barang SET stok = stok - ?, updated_at = ? WHERE id = ?',
-          args: [item.quantity, now, item.barang_id]
+        qtyByProduct.set(item.barang_id, (qtyByProduct.get(item.barang_id) || 0) + item.quantity);
+      }
+      for (const [productId, quantity] of qtyByProduct) {
+        await updateStockWithMutation(transaction, {
+          barangId: Number(productId),
+          mode: 'delta',
+          amount: -Number(quantity),
+          type: 'batal_kulakan',
+          referenceId: id,
+          note: reason,
+          timestamp: now
         });
       }
       return { voided: true, already_voided: false };
