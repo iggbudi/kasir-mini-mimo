@@ -1366,6 +1366,28 @@ button[data-loading="true"] .btn-label { opacity: 0.85; }
 
 /* === Stock Management (Master Barang) === */
 
+.stock-filter {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.stock-filter__search {
+  width: 100%;
+}
+
+/* Kontrol (Status/Kondisi/Batas) tetap 3 kolom di layar lebar dan mengecil
+   rapi di layar sempit tanpa berhimpitan. */
+.stock-filter__controls {
+  align-items: end;
+}
+
+@media (max-width: 480px) {
+  .stock-filter__controls .stock-limit-control {
+    flex-wrap: wrap;
+  }
+}
+
 .stock-limit-control {
   display: flex;
   gap: 8px;
