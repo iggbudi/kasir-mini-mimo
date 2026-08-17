@@ -19,7 +19,7 @@
           <h1 class="dashboard-hero__warung" id="warung">Memuat...</h1>
           <p class="dashboard-hero__greeting" id="welcome">Memeriksa admin...</p>
         </div>
-        <button class="dashboard-hero__logout" type="button" onclick="window.KasirApp.logout()">Keluar</button>
+        <button class="dashboard-hero__logout" type="button" id="btnLogout">Keluar</button>
       </div>
 
       <div class="dashboard-hero__datetime" id="currentDateTime">Memuat waktu...</div>
@@ -82,6 +82,10 @@
     (async () => {
       const KasirApp = window.KasirApp;
       KasirApp.renderBottomNav('home');
+
+      // Tombol Keluar: pakai addEventListener, bukan onclick inline — CSP
+      // script-src-attr 'none' memblokir inline event handler.
+      document.getElementById('btnLogout').addEventListener('click', () => KasirApp.logout());
 
       const connectionStatus = document.getElementById('connectionStatus');
       function updateConnectionStatus() {
