@@ -28,7 +28,7 @@ test('script barang memakai API config, filter, opname catatan, dan riwayat', ()
 
 test('service worker cache dibump setelah aset stok berubah', () => {
   const sw = readProjectFile('public/sw.js');
-  assert.match(sw, /kasir-mini-v21/);
+  assert.match(sw, /kasir-mini-v22/);
 });
 
 test('service worker memakai network-first untuk navigasi dan sw.js', () => {
@@ -38,6 +38,12 @@ test('service worker memakai network-first untuk navigasi dan sw.js', () => {
   assert.match(sw, /fetch\(request\)\.then/);
   // sw.js tidak boleh di-serve dari cache.
   assert.match(sw, /event\.respondWith\(fetch\(request\)\)/);
+});
+
+test('service worker tidak meng-cache redirect navigasi (mis. /logout)', () => {
+  const sw = readProjectFile('public/sw.js');
+  assert.match(sw, /networkResponse && networkResponse\.ok/);
+  assert.match(sw, /cache\.put\(request, responseToCache\)\.catch/);
 });
 
 test('registrasi service worker memakai updateViaCache none + auto reload', () => {

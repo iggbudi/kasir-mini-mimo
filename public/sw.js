@@ -1,4 +1,4 @@
-const CACHE_NAME = 'kasir-mini-v21';
+const CACHE_NAME = 'kasir-mini-v22';
 const ASSETS = [
   '/',
   '/index.html',
@@ -77,10 +77,15 @@ self.addEventListener('fetch', (event) => {
     if (isNavigation) {
       event.respondWith(
         fetch(request).then((networkResponse) => {
-          const responseToCache = networkResponse.clone();
-          caches.open(CACHE_NAME).then((cache) => {
-            cache.put(request, responseToCache);
-          });
+          // Hanya cache respons sukses. Redirect (mis. /logout → /login.html)
+          // dan error TIDAK boleh masuk cache; cache.put response redirect
+          // justru melempar dan bisa membatalkan navigasi.
+          if (networkResponse && networkResponse.ok) {
+            const responseToCache = networkResponse.clone();
+            caches.open(CACHE_NAME).then((cache) => {
+              cache.put(request, responseToCache).catch(() => {});
+            }).catch(() => {});
+          }
           return networkResponse;
         }).catch(() => {
           return caches.match(request).then((cached) => {
