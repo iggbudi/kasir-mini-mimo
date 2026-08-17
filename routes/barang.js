@@ -11,7 +11,7 @@ const {
   optionalString
 } = require('../utils/validate');
 const { getNowWib } = require('../utils/date');
-const { STOCK_CONDITIONS, classifyStock } = require('../utils/stock');
+const { STOCK_CONDITIONS, classifyStock, updateStockWithMutation } = require('../utils/stock');
 
 const router = express.Router();
 const VALID_STATUSES = new Set(['aktif', 'arsip', 'semua']);
@@ -200,23 +200,21 @@ router.put('/:id/stok', async (req, res) => {
     const now = getNowWib();
 
     const result = await withWriteTransaction(async (transaction) => {
-      const current = await transaction.execute({
-        sql: 'SELECT id, stok FROM master_barang WHERE id = ?',
-        args: [id]
+      const mutation = await updateStockWithMutation(transaction, {
+        barangId: id,
+        mode: 'set',
+        amount: stok,
+        type: 'opname',
+        note: catatan,
+        timestamp: now
       });
-      const row = current.rows[0] || null;
-      if (!row) throw new BusinessError(404, 'ID tidak ditemukan');
-      const stokSebelum = Number(row.stok || 0);
+      if (!mutation) throw new BusinessError(404, 'ID tidak ditemukan');
 
       await transaction.execute({
         sql: 'INSERT INTO stok_adjustment (barang_id, stok_sebelum, stok_sesudah, catatan) VALUES (?, ?, ?, ?)',
-        args: [id, stokSebelum, stok, catatan]
+        args: [id, mutation.stok_sebelum, mutation.stok_sesudah, catatan]
       });
-      await transaction.execute({
-        sql: 'UPDATE master_barang SET stok = ?, updated_at = ? WHERE id = ?',
-        args: [stok, now, id]
-      });
-      return { id, stok_sebelum: stokSebelum, stok_sesudah: stok, catatan };
+      return { id, stok_sebelum: mutation.stok_sebelum, stok_sesudah: mutation.stok_sesudah, catatan };
     });
 
     return success(res, result);
@@ -225,6 +223,47 @@ router.put('/:id/stok', async (req, res) => {
     if (err instanceof BusinessError) return fail(res, err.status, err.message);
     console.error(err);
     return fail(res, 500, 'Gagal memperbarui stok');
+  }
+});
+
+router.get('/:id/mutasi', async (req, res) => {
+  try {
+    const id = requirePositiveId(req.params.id);
+    const limit = req.query.limit === undefined ? 20 : requirePositiveInteger(req.query.limit, 'Limit');
+    const offset = req.query.offset === undefined ? 0 : requireNonNegativeInteger(req.query.offset, 'Offset');
+    if (limit > 100) throw new ValidationError('Limit maksimal 100');
+
+    const existing = await getOne('SELECT id FROM master_barang WHERE id = ?', [id]);
+    if (!existing) return fail(res, 404, 'ID tidak ditemukan');
+
+    const rows = await getAll(`
+      SELECT
+        m.id, m.barang_id, m.tipe, m.perubahan, m.stok_sebelum,
+        m.stok_sesudah, m.referensi_id, m.catatan, m.tanggal,
+        CASE
+          WHEN m.tipe IN ('penjualan', 'batal_penjualan') THEN p.nomor_nota
+          WHEN m.tipe IN ('kulakan', 'batal_kulakan') THEN k.nomor_kulakan
+          ELSE NULL
+        END AS nomor_referensi
+      FROM stok_mutation m
+      LEFT JOIN penjualan p
+        ON m.tipe IN ('penjualan', 'batal_penjualan') AND p.id = m.referensi_id
+      LEFT JOIN kulakan k
+        ON m.tipe IN ('kulakan', 'batal_kulakan') AND k.id = m.referensi_id
+      WHERE m.barang_id = ?
+      ORDER BY m.tanggal DESC, m.id DESC
+      LIMIT ? OFFSET ?
+    `, [id, limit + 1, offset]);
+    const hasMore = rows.length > limit;
+    if (hasMore) rows.pop();
+    return success(res, {
+      items: rows,
+      pagination: { limit, offset, has_more: hasMore }
+    });
+  } catch (err) {
+    if (err instanceof ValidationError) return fail(res, 400, err.message);
+    console.error(err);
+    return fail(res, 500, 'Gagal mengambil riwayat mutasi stok');
   }
 });
 

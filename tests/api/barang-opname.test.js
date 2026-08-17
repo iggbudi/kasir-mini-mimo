@@ -88,6 +88,11 @@ test('PUT stok valid → 200, stok tersimpan, ada riwayat', async () => {
   assert.equal(riwayat.length, 1);
   assert.equal(riwayat[0].stok_sebelum, 0);
   assert.equal(riwayat[0].stok_sesudah, 15);
+  const mutations = backup.body.stok_mutation.filter(row => row.barang_id === barangId);
+  assert.equal(mutations.length, 1);
+  assert.equal(mutations[0].tipe, 'opname');
+  assert.equal(mutations[0].perubahan, 15);
+  assert.equal(mutations[0].catatan, 'Opname awal');
 });
 
 test('PUT stok negatif ditolak', async () => {
