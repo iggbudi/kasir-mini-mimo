@@ -41,7 +41,7 @@ test('riwayat kosong menjelaskan titik awal ledger dan fallback ID aman', () => 
 
 test('service worker cache dibump setelah aset stok berubah', () => {
   const sw = readProjectFile('public/sw.js');
-  assert.match(sw, /kasir-mini-v18/);
+  assert.match(sw, /kasir-mini-v19/);
 });
 
 test('filter stok Master Barang menjadi 2 kolom di layar sempit (mobile)', () => {
