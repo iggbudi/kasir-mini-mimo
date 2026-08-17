@@ -11,6 +11,7 @@ const {
   optionalString
 } = require('../utils/validate');
 const { getNowWib } = require('../utils/date');
+const { STOCK_CONDITIONS, classifyStock } = require('../utils/stock');
 
 const router = express.Router();
 const VALID_STATUSES = new Set(['aktif', 'arsip', 'semua']);
@@ -62,6 +63,12 @@ router.get('/', async (req, res) => {
       ? ''
       : requireString(req.query.q, 'Pencarian');
     if (search.length > 100) throw new ValidationError('Pencarian maksimal 100 karakter');
+    const stockCondition = req.query.kondisi_stok === undefined ? 'semua' : req.query.kondisi_stok;
+    if (typeof stockCondition !== 'string' || !STOCK_CONDITIONS.has(stockCondition)) {
+      throw new ValidationError('Kondisi stok tidak valid');
+    }
+    const setting = await getOne("SELECT value FROM setting WHERE key = 'stok_minimum'");
+    const stockMinimum = Number(setting?.value || 5);
 
     const conditions = [];
     const params = [];
@@ -71,6 +78,16 @@ router.get('/', async (req, res) => {
       conditions.push('instr(nama_normalized, ?) > 0');
       params.push(normalizeName(search));
     }
+    if (stockCondition === 'minus') conditions.push('stok < 0');
+    if (stockCondition === 'habis') conditions.push('stok = 0');
+    if (stockCondition === 'menipis') {
+      conditions.push('stok >= 1 AND stok <= ?');
+      params.push(stockMinimum);
+    }
+    if (stockCondition === 'aman') {
+      conditions.push('stok > ?');
+      params.push(stockMinimum);
+    }
 
     const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
     const items = await getAll(`
@@ -79,11 +96,39 @@ router.get('/', async (req, res) => {
       ${where}
       ORDER BY aktif DESC, nama COLLATE NOCASE ASC
     `, params);
-    return success(res, items);
+    return success(res, items.map(item => ({
+      ...item,
+      kondisi_stok: classifyStock(Number(item.stok || 0), stockMinimum)
+    })));
   } catch (err) {
     if (err instanceof ValidationError) return fail(res, 400, err.message);
     console.error(err);
     return fail(res, 500, 'Gagal mengambil master barang');
+  }
+});
+
+router.get('/stok-config', async (_req, res) => {
+  try {
+    const row = await getOne("SELECT value FROM setting WHERE key = 'stok_minimum'");
+    return success(res, { stok_minimum: Number(row?.value || 5) });
+  } catch (err) {
+    console.error(err);
+    return fail(res, 500, 'Gagal mengambil batas stok minimum');
+  }
+});
+
+router.put('/stok-config', async (req, res) => {
+  try {
+    const minimum = requirePositiveInteger(req.body?.stok_minimum, 'Batas stok minimum');
+    await run(
+      'INSERT INTO setting (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value',
+      ['stok_minimum', String(minimum)]
+    );
+    return success(res, { stok_minimum: minimum });
+  } catch (err) {
+    if (err instanceof ValidationError) return fail(res, 400, err.message);
+    console.error(err);
+    return fail(res, 500, 'Gagal memperbarui batas stok minimum');
   }
 });
 
