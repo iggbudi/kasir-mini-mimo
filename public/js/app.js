@@ -439,10 +439,24 @@ function initOfflineHandling() {
 // === PWA Service Worker ===
 function registerServiceWorker() {
   if ('serviceWorker' in navigator) {
+    // updateViaCache: 'none' memaksa browser selalu mengecek /sw.js ke
+    // network (tidak menahan versi lama di HTTP cache), sehingga update
+    // terdeteksi segera setelah deploy.
     window.addEventListener('load', () => {
-      navigator.serviceWorker.register('/sw.js')
+      navigator.serviceWorker.register('/sw.js', { updateViaCache: 'none' })
         .then((registration) => {
           console.log('SW registered:', registration.scope);
+
+          // Saat SW baru selesai menginstall (skipWaiting aktif), langsung
+          // reload sekali supaya pengguna memakai aset versi baru tanpa
+          // perlu membuka tutup aplikasi.
+          let refreshing = false;
+          navigator.serviceWorker.addEventListener('controllerchange', () => {
+            if (refreshing) return;
+            refreshing = true;
+            console.log('SW baru aktif, reload untuk memuat versi terbaru');
+            window.location.reload();
+          });
         })
         .catch((error) => {
           console.log('SW registration failed:', error);

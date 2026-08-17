@@ -112,6 +112,14 @@ app.use((req, res, next) => {
   return next();
 });
 
+// sw.js harus selalu fresh agar browser mendeteksi versi baru (PWA update).
+// Tanpa header ini, proxy/CDN dapat menahan sw.js lama dan update tidak pernah
+// sampai ke pengguna.
+app.get('/sw.js', (_req, res, next) => {
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+  return next();
+});
+
 app.use(express.static(publicDir, { extensions: ['html'] }));
 
 app.get('*', (req, res) => {
