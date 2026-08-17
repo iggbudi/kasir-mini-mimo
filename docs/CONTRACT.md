@@ -180,7 +180,7 @@ Header opsional `Idempotency-Key` didukung.
 
 `jenis_harga` (`retail` | `grosir`) berada pada header penjualan dan berlaku untuk seluruh detail berdasarkan `penjualan_id`. Harga per barang tetap dapat disesuaikan. Saat header Grosir dipilih, UI memakai harga grosir master jika tersedia dan fallback ke harga retail jika tidak tersedia. Server mengambil nama barang aktif dari master lalu menyimpan nama, harga, quantity, dan subtotal sebagai snapshot detail. Nomor nota dibuat otomatis dengan format `PJ-YYYYMMDD-ID`.
 
-**Stok:** Penjualan mengurangi stok master barang sesuai quantity dalam transaksi yang sama. Jika quantity melebihi stok tersedia, respons **409** `Stok <nama> tidak cukup (sisa <n>)` dan tidak ada perubahan. Pembatalan penjualan (void) mengembalikan stok; void dua kali tidak mengembalikan dua kali. Transaksi pemasukan lama (standalone) tidak menyentuh stok.
+**Stok:** Penjualan mengurangi stok master barang sesuai quantity dalam transaksi yang sama. Jika quantity melebihi stok tersedia, penjualan tetap disimpan dan stok boleh menjadi minus. Pembatalan penjualan (void) mengembalikan stok; void dua kali tidak mengembalikan dua kali. Transaksi pemasukan lama (standalone) tidak menyentuh stok.
 
 #### GET `/api/penjualan?dari=&sampai=`
 

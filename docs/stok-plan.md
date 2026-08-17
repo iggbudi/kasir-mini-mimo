@@ -10,7 +10,7 @@
 
 | No | Keputusan | Pilihan |
 |----|-----------|---------|
-| 1 | Penjualan saat stok kurang | **Peringatan + hanya bisa jual sesuai stok tersedia** (client membatasi input, server menolak jika melebihi) |
+| 1 | Penjualan saat stok kurang | **Peringatan + penjualan tetap diizinkan** (stok boleh menjadi minus; client dan server tidak membatasi quantity) |
 | 2 | Stok awal saat fitur aktif | **Isi manual per barang** di halaman Master Barang (stok opname) |
 
 ## Keputusan Desain (diusulkan, butuh konfirmasi saat review)
@@ -51,12 +51,12 @@ Catatan: `PRAGMA table_info` pattern yang sudah ada di `db/migrations.js` dipaka
 
 **POST `/api/penjualan`** (dalam satu write-transaction, urutan):
 1. Insert header + detail (seperti sekarang).
-2. Untuk setiap detail (barang_id valid), kurangi stok dengan **conditional update**:
+2. Untuk setiap detail (barang_id valid), kurangi stok tanpa membatasi stok minimum:
    ```sql
    UPDATE master_barang SET stok = stok - ?, updated_at = ?
-   WHERE id = ? AND aktif = 1 AND stok >= ?
+   WHERE id = ? AND aktif = 1
    ```
-3. Jika `rowsAffected` jumlah detail < jumlah barang unik → rollback + respons 409 `Stok barang <nama> tidak cukup (sisa <stok>)`. (Rollback otomatis oleh exception di dalam `withWriteTransaction`.)
+3. Quantity yang melebihi stok tersedia tetap disimpan; stok dapat menjadi minus. Kegagalan hanya terjadi jika barang tidak ditemukan atau diarsipkan.
 
 **DELETE `/api/penjualan/:id`** (void):
 1. SELECT detail non-voided (`barang_id`, `quantity`) terlebih dahulu.
@@ -101,9 +101,9 @@ Catatan: `PRAGMA table_info` pattern yang sudah ada di `db/migrations.js` dipaka
 ### 2. Halaman Jual — `pemasukan.html` / `pemasukan.js`
 
 - Combobox & product browser: tampilkan **Stok tersedia** di samping harga.
-- Saat input quantity > stok: **peringatan** "Stok <nama> tinggal <n>" dan **jumlah dibatasi** ke stok (validasi client + `max`).
-- Stok 0 → item tidak bisa ditambahkan (pesan "Stok habis").
-- Error 409 dari server (stok berubah/sisa kurang) ditampilkan via `showToast`.
+- Saat input quantity > stok: **peringatan** "Stok <nama> tinggal <n>"; quantity tetap dapat disimpan dan stok menjadi minus.
+- Stok 0 atau minus tetap dapat dipilih untuk penjualan; tampilkan kondisi stok sebagai peringatan.
+- Error validasi lain dari server tetap ditampilkan via `showToast`; stok kurang bukan alasan penolakan.
 
 ### 3. Halaman Kulakan — `kulakan.js`
 
@@ -116,7 +116,7 @@ Catatan: `PRAGMA table_info` pattern yang sudah ada di `db/migrations.js` dipaka
 
 ### `penjualan-stok.test.js` (atau perluasan penjualan.test.js)
 1. POST penjualan → stok barang berkurang sesuai quantity.
-2. POST penjualan melebihi stok → 409, stok tidak berubah (transaksi rollback).
+2. POST penjualan melebihi stok → berhasil, stok menjadi minus sesuai selisih.
 3. DELETE penjualan (void) → stok kembali ke nilai semula.
 4. Void dua kali → stok tidak di-restore dua kali.
 
@@ -136,7 +136,7 @@ Catatan: `PRAGMA table_info` pattern yang sudah ada di `db/migrations.js` dipaka
 - `node --check` semua file yang diubah (bisa di Termux).
 - Full `npm test` + cek manual di lingkungan dengan deps:
   1. Isi stok awal via Master Barang → terlihat di Jual.
-  2. Jual sesuai stok → stok berkurang; lebih dari stok → peringatan & dibatasi.
+  2. Jual sesuai stok → stok berkurang; lebih dari stok → peringatan & stok menjadi minus.
   3. Batalkan penjualan → stok kembali.
   4. Kulakan → stok naik; batalkan → turun.
   5. `db:restore` dari backup lama tetap berjalan (migration v8 idempotent).
@@ -147,10 +147,10 @@ Catatan: `PRAGMA table_info` pattern yang sudah ada di `db/migrations.js` dipaka
 ## Definisi Selesai (DoD)
 
 - [x] Migration v8: kolom `stok` + tabel `stok_adjustment` (idempotent, restore lama tetap jalan) — `db/migrations.js`, `db/restore.js`, `routes/backup.js`
-- [x] Penjualan: stok turun otomatis; melebihi stok ditolak 409; void mengembalikan; tidak double-restore — `routes/penjualan.js` + `tests/api/penjualan-stok.test.js`
+- [x] Penjualan: stok turun otomatis dan boleh menjadi minus; void mengembalikan; tidak double-restore — `routes/penjualan.js` + `tests/api/penjualan-stok.test.js`
 - [x] Kulakan: stok naik otomatis; void mengurangi (boleh minus) — `routes/kulakan.js` + `tests/api/kulakan-stok.test.js`
 - [x] Opname: PUT `/api/barang/:id/stok` dengan validasi & riwayat — `routes/barang.js` + `tests/api/barang-opname.test.js`
-- [x] UI: Master Barang (stok + Isi Stok + badge Habis), Jual (stok tersedia + batasan + peringatan), Kulakan (tampil stok) — `barang.js`, `pemasukan.js`, `kulakan.js`, `app.js` (promptNumber), `style.css`, `sw.js` v17
+- [x] UI: Master Barang (stok + Isi Stok + badge Habis), Jual (stok tersedia + peringatan tanpa pembatasan quantity), Kulakan (tampil stok) — `barang.js`, `pemasukan.js`, `kulakan.js`, `app.js` (promptNumber), `style.css`, `sw.js` v17
 - [x] Test stok baru dan regresi terkait lulus di environment branch; full suite saat dokumentasi dijalankan: 140 lulus, 1 gagal pada assertion landing page login yang tidak terkait stok.
 - [x] Dokumentasi (CONTRACT.md + README) diperbarui
 
