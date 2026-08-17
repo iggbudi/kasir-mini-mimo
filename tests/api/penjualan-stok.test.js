@@ -55,6 +55,14 @@ async function stokBarang() {
   return body.data.find(item => item.id === barangId).stok;
 }
 
+async function mutationsFor(referenceId, type) {
+  const { getAll } = require('../../db/query');
+  return getAll(
+    'SELECT * FROM stok_mutation WHERE referensi_id = ? AND tipe = ? ORDER BY barang_id',
+    [referenceId, type]
+  );
+}
+
 test('setup: login + barang dengan stok 10', async () => {
   cookie = await login();
   assert.ok(cookie);
@@ -129,6 +137,13 @@ test('void penjualan mengembalikan stok', async () => {
   assert.equal(del.res.status, 200);
   assert.equal(del.body.data.stok_dikembalikan, 1);
   assert.equal(await stokBarang(), 7);
+  const rows = await mutationsFor(sale.body.data.id, 'batal_penjualan');
+  assert.equal(rows.length, 1);
+  assert.equal(rows[0].perubahan, 2);
+  assert.equal(rows[0].catatan, 'Test');
+  const history = await json(`/api/barang/${barangId}/mutasi`, { headers: { cookie } });
+  assert.equal(history.res.status, 200);
+  assert.equal(history.body.data.items[0].nomor_referensi, sale.body.data.nomor_nota);
 });
 
 test('void dua kali tidak mengembalikan stok dua kali', async () => {
@@ -150,6 +165,8 @@ test('void dua kali tidak mengembalikan stok dua kali', async () => {
   });
   assert.equal(del1.body.data.already_voided, false);
   assert.equal(await stokBarang(), 7);
+  const mutationsAfterFirstVoid = await mutationsFor(sale.body.data.id, 'batal_penjualan');
+  assert.equal(mutationsAfterFirstVoid.length, 1);
 
   const del2 = await json(`/api/penjualan/${sale.body.data.id}`, {
     method: 'DELETE',
@@ -158,6 +175,8 @@ test('void dua kali tidak mengembalikan stok dua kali', async () => {
   });
   assert.equal(del2.body.data.already_voided, true);
   assert.equal(await stokBarang(), 7);
+  const mutationsAfterSecondVoid = await mutationsFor(sale.body.data.id, 'batal_penjualan');
+  assert.equal(mutationsAfterSecondVoid.length, 1);
 });
 
 test('idempotency replay tidak mengurangi stok dua kali', async () => {
@@ -181,4 +200,56 @@ test('idempotency replay tidak mengurangi stok dua kali', async () => {
   assert.equal(second.res.status, 201);
   assert.equal(second.body.data.id, first.body.data.id);
   assert.equal(await stokBarang(), 5);
+  const rows = await mutationsFor(first.body.data.id, 'penjualan');
+  assert.equal(rows.length, 1);
+});
+
+test('penjualan dengan barang sama mencatat satu mutasi agregat', async () => {
+  const sale = await json('/api/penjualan', {
+    method: 'POST',
+    headers: { cookie },
+    body: JSON.stringify({
+      jenis_harga: 'retail',
+      items: [
+        { barang_id: barangId, quantity: 2, harga: 17000 },
+        { barang_id: barangId, quantity: 3, harga: 17000 }
+      ]
+    })
+  });
+  assert.equal(sale.res.status, 201);
+  assert.equal(await stokBarang(), 0);
+  const rows = await mutationsFor(sale.body.data.id, 'penjualan');
+  assert.equal(rows.length, 1);
+  assert.equal(rows[0].perubahan, -5);
+  assert.equal(rows[0].stok_sesudah, rows[0].stok_sebelum - 5);
+});
+
+test('kegagalan ledger membatalkan penjualan dan perubahan stok', async () => {
+  const { getOne, run } = require('../../db/query');
+  const stokSebelum = await stokBarang();
+  const headerSebelum = (await getOne('SELECT COUNT(*) AS jumlah FROM penjualan')).jumlah;
+  await run(`
+    CREATE TRIGGER fail_stock_mutation
+    BEFORE INSERT ON stok_mutation
+    WHEN NEW.tipe = 'penjualan'
+    BEGIN
+      SELECT RAISE(ABORT, 'forced ledger failure');
+    END
+  `);
+  try {
+    const sale = await json('/api/penjualan', {
+      method: 'POST',
+      headers: { cookie },
+      body: JSON.stringify({
+        jenis_harga: 'retail',
+        items: [{ barang_id: barangId, quantity: 1, harga: 17000 }]
+      })
+    });
+    assert.equal(sale.res.status, 500);
+    assert.equal(await stokBarang(), stokSebelum);
+    const headerSesudah = (await getOne('SELECT COUNT(*) AS jumlah FROM penjualan')).jumlah;
+    assert.equal(headerSesudah, headerSebelum);
+  } finally {
+    await run('DROP TRIGGER IF EXISTS fail_stock_mutation');
+  }
 });
