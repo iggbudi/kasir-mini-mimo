@@ -1103,6 +1103,18 @@ button[data-loading="true"] .btn-label { opacity: 0.85; }
   .dashboard-hero__logout { min-width: 68px; padding: 0 12px; }
 }
 
+/* Master Barang: filter stok 2 kolom di layar sempit agar tidak mepet */
+@media (max-width: 560px) {
+  .filter-row {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+  .filter-row .filter-field { max-width: none; }
+  .stock-limit-control { flex-wrap: nowrap; }
+  .stock-limit-control input { flex: 1; min-width: 0; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .list-item, .toast, .modal-overlay, .modal, .menu-card { animation: none; }
   button, .button, .nav-link, .btn-filter, .menu-card, .list-item, .toast, .progress-bar__fill, input, select, textarea { transition: none; }

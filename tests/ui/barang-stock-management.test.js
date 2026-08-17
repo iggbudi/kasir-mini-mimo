@@ -43,3 +43,10 @@ test('service worker cache dibump setelah aset stok berubah', () => {
   const sw = readProjectFile('public/sw.js');
   assert.match(sw, /kasir-mini-v18/);
 });
+
+test('filter stok Master Barang menjadi 2 kolom di layar sempit (mobile)', () => {
+  const css = readProjectFile('public/css/style.css');
+  const responsive = css.slice(css.indexOf('/* === Responsive === */'));
+  assert.match(responsive, /\.filter-row\s*\{[^}]*display:\s*grid/);
+  assert.match(responsive, /grid-template-columns:\s*repeat\(2,\s*minmax\(0,\s*1fr\)\)/);
+});
