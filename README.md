@@ -45,54 +45,15 @@ TURSO_DATABASE_URL=libsql://YOUR_DB.turso.io
 TURSO_AUTH_TOKEN=your-token
 ```
 
-## Deploy ke Vercel
-
-### 1. Setup Turso
-```bash
-# Install Turso CLI
-curl -sSfL https://get.tur.so/install.sh | bash
-
-# Login
-turso auth login
-
-# Buat database
-turso db kasir-mini-prod
-
-# Dapatkan credentials
-turso db show kasir-mini-prod --url
-turso db tokens create kasir-mini-prod
-```
-
-### 2. Deploy
-```bash
-# Install Vercel CLI
-npm i -g vercel
-
-# Deploy
-vercel
-
-# Set environment variables SEBELUM deploy production
-vercel env add TURSO_DATABASE_URL
-vercel env add TURSO_AUTH_TOKEN
-vercel env add NODE_ENV production
-vercel env add ADMIN_PASSWORD
-
-# Deploy ke production
-vercel --prod
-```
-
-### 3. Init Database di Production
-Setelah deploy pertama kali, jalankan init via Vercel:
-```bash
-# Atau buka endpoint init manual (jika ditambahkan)
-```
-Database akan ter-inisialisasi otomatis saat build via `vercel-build` script. **Build production GAGAL jika `ADMIN_PASSWORD` tidak diset** (safety net — tidak lagi memakai default `admin123`). Jika `ADMIN_PASSWORD` diubah, deploy ulang agar hash password admin ikut diperbarui.
-
 ## Deploy ke VPS (nginx + systemd)
 
-Alternatif selain Vercel: jalankan di VPS sendiri dengan nginx sebagai reverse proxy
-dan systemd sebagai process manager. Contoh konfigurasi sudah disediakan di
+Deploy utama aplikasi ini adalah VPS dengan nginx sebagai reverse proxy dan
+systemd sebagai process manager. Contoh konfigurasi sudah disediakan di
 folder `deploy/` (dipakai untuk `tanisubur.nanariset.my.id`).
+Karena coding dan deploy di VPS yang sama, perubahan langsung aktif untuk
+file `public/` (nginx menyajikan dari disk); perubahan backend cukup
+`sudo systemctl restart kasir-mini`. Push ke GitHub hanya backup kode —
+tidak memicu deploy.
 
 ### 1. Prasyarat
 
@@ -173,15 +134,14 @@ systemctl is-active kasir-mini nginx          # active active
 | `LOGIN_LOCK_SEC` | Tidak | `900` | Durasi lockout setelah ambang tercapai (detik) |
 | `ADMIN_USERNAME` | Tidak | `admin` | Username admin |
 | `ADMIN_PASSWORD` | Ya (prod) | - | Password admin. **Build production gagal jika kosong** (bukan default `admin123`) |
-| `NODE_ENV` | Tidak | - | Set `production` di Vercel |
+| `NODE_ENV` | Tidak | - | Set `production` untuk mode produksi (dipakai unit systemd) |
 
 ## Scripts
 - `npm start`: Jalankan server
 - `npm run dev`: Jalankan dengan auto-reload
 - `npm run db:init`: Inisialisasi schema dan jalankan migration database
 - `npm run db:restore -- path/backup.json`: Restore backup JSON (wajib `RESTORE_CONFIRM=RESTORE_KASIR_MINI`)
-- `npm test`: Jalankan semua test API & UI (103 tests)
-- `npm run vercel-build`: Init database saat build Vercel. Build akan gagal jika production tidak memakai Turso remote.
+- `npm test`: Jalankan semua test API & UI (node:test)
 
 ## Struktur
 ```
@@ -211,7 +171,7 @@ systemctl is-active kasir-mini nginx          # active active
 │   └── backup.js       # Export JSON
 ├── public/             # Frontend statis
 ├── tests/api/          # Test API (node:test)
-├── vercel.json         # Konfigurasi Vercel
+├── deploy/             # Contoh deploy VPS (systemd + nginx)
 └── server.js           # Express app
 ```
 
@@ -240,7 +200,7 @@ npm test
 - **Security**: helmet + CSP parsial (blokir exfiltration/plugin/clickjacking)
 - **Frontend**: Vanilla HTML/CSS/JS (no framework)
 - **Database**: Turso (libSQL/SQLite)
-- **Deploy**: Vercel (serverless)
+- **Deploy**: VPS (nginx + systemd, port 3001); GitHub sebagai backup kode
 - **Test**: Node.js built-in test runner
 
 Lihat `docs/sprint.md` untuk roadmap lengkap.
