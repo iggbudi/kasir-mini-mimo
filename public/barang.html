@@ -53,17 +53,34 @@
     </section>
 
     <section class="card mt-3">
-      <div class="form-row" style="align-items:end;">
+      <div class="form-row filter-row">
         <div>
           <label for="search">Cari Barang</label>
           <input id="search" type="search" placeholder="Ketik nama barang">
         </div>
-        <div style="max-width:130px;">
+        <div class="filter-field">
           <label for="status">Status</label>
           <select id="status">
             <option value="aktif">Aktif</option>
             <option value="arsip">Diarsipkan</option>
             <option value="semua">Semua</option>
+          </select>
+        </div>
+        <div>
+          <label for="stokMinimum">Batas Stok Minimum</label>
+          <div class="stock-limit-control">
+            <input id="stokMinimum" type="number" min="1" inputmode="numeric" value="5">
+            <button type="button" class="secondary" id="btnSaveStokMinimum">Simpan</button>
+          </div>
+        </div>
+        <div>
+          <label for="kondisiStok">Kondisi Stok</label>
+          <select id="kondisiStok">
+            <option value="semua">Semua</option>
+            <option value="minus">Minus</option>
+            <option value="habis">Habis</option>
+            <option value="menipis">Menipis</option>
+            <option value="aman">Aman</option>
           </select>
         </div>
       </div>
