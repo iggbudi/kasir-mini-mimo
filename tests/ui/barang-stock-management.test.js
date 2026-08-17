@@ -24,6 +24,14 @@ test('script barang memakai API config, filter, opname catatan, dan riwayat', ()
   assert.match(js, /pagination\.has_more/);
 });
 
+test('riwayat stok mempertahankan item saat retry dan memulihkan label pagination', () => {
+  const js = readProjectFile('public/js/barang.js');
+  assert.match(js, /data-history-error/);
+  assert.match(js, /error\.textContent = err\.message/);
+  assert.doesNotMatch(js, /catch \(err\) \{ list\.innerHTML/);
+  assert.match(js, /more\.textContent = 'Muat Lagi'/);
+});
+
 test('service worker cache dibump setelah aset stok berubah', () => {
   const sw = readProjectFile('public/sw.js');
   assert.match(sw, /kasir-mini-v18/);
