@@ -65,4 +65,8 @@ test('GET backup mengembalikan JSON export', async () => {
   assert.ok(Array.isArray(body.kasbon));
   assert.ok(Array.isArray(body.kasbon_bayar));
   assert.ok(Array.isArray(body.setting));
+  assert.ok(Array.isArray(body.stok_mutation));
+  assert.equal(body.counts.stok_mutation, body.stok_mutation.length);
+  assert.ok(body.schema_version >= 9);
+  assert.ok(body.setting.some(row => row.key === 'stok_minimum' && row.value === '5'));
 });

@@ -150,6 +150,39 @@ const MIGRATIONS = [
       `);
       await transaction.execute('CREATE INDEX IF NOT EXISTS idx_stok_adjustment_barang ON stok_adjustment(barang_id)');
     }
+  },
+  {
+    version: 9,
+    name: 'stock_mutation_ledger',
+    up: async (transaction) => {
+      await transaction.execute(`
+        CREATE TABLE IF NOT EXISTS stok_mutation (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          barang_id INTEGER NOT NULL REFERENCES master_barang(id),
+          tipe TEXT NOT NULL CHECK (tipe IN (
+            'penjualan', 'kulakan', 'batal_penjualan', 'batal_kulakan', 'opname'
+          )),
+          perubahan INTEGER NOT NULL,
+          stok_sebelum INTEGER NOT NULL,
+          stok_sesudah INTEGER NOT NULL,
+          referensi_id INTEGER,
+          catatan TEXT,
+          tanggal TEXT NOT NULL
+        )
+      `);
+      await transaction.execute(`
+        CREATE INDEX IF NOT EXISTS idx_stok_mutation_barang_tanggal
+        ON stok_mutation(barang_id, tanggal DESC, id DESC)
+      `);
+      await transaction.execute(`
+        CREATE UNIQUE INDEX IF NOT EXISTS idx_stok_mutation_reference
+        ON stok_mutation(tipe, referensi_id, barang_id)
+        WHERE referensi_id IS NOT NULL
+      `);
+      await transaction.execute(
+        "INSERT OR IGNORE INTO setting (key, value) VALUES ('stok_minimum', '5')"
+      );
+    }
   }
 ];
 

@@ -98,6 +98,7 @@ async function initDb() {
 
   await run('INSERT OR IGNORE INTO setting (key, value) VALUES (?, ?)', ['nama_warung', 'Warung Saya'])
   await run('INSERT OR IGNORE INTO setting (key, value) VALUES (?, ?)', ['timezone', 'Asia/Jakarta'])
+  await run('INSERT OR IGNORE INTO setting (key, value) VALUES (?, ?)', ['stok_minimum', '5'])
 
   const username = process.env.ADMIN_USERNAME || 'admin';
   const existing = await getOne('SELECT id FROM admin_user WHERE username = ?', [username]);
