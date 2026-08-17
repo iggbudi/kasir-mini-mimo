@@ -10,6 +10,7 @@ process.env.ADMIN_USERNAME = 'admin';
 process.env.ADMIN_PASSWORD = 'admin123';
 
 const { initDb } = require('../../db/init');
+const { getAll } = require('../../db/query');
 const app = require('../../server');
 
 let server;
@@ -133,4 +134,133 @@ test('void kulakan setelah barang terjual → stok boleh minus', async () => {
   });
   assert.equal(del.res.status, 200);
   assert.equal(await stokBarang(), -3);
+});
+
+test('kulakan menulis satu mutasi agregat per barang', async () => {
+  const kulakan = await json('/api/kulakan', {
+    method: 'POST',
+    headers: { cookie },
+    body: JSON.stringify({
+      salesman_id: salesmanId,
+      items: [
+        { barang_id: barangId, quantity: 2, harga_beli: 60000 },
+        { barang_id: barangId, quantity: 3, harga_beli: 60000 }
+      ]
+    })
+  });
+  assert.equal(kulakan.res.status, 201);
+
+  const rows = await getAll(
+    "SELECT * FROM stok_mutation WHERE referensi_id = ? AND tipe = 'kulakan'",
+    [kulakan.body.data.id]
+  );
+  assert.equal(rows.length, 1);
+  assert.equal(rows[0].perubahan, 5);
+  assert.equal(rows[0].stok_sesudah, rows[0].stok_sebelum + 5);
+});
+
+test('void kulakan menulis batal_kulakan dengan alasan', async () => {
+  const stokSebelum = await stokBarang();
+  const kulakan = await json('/api/kulakan', {
+    method: 'POST',
+    headers: { cookie },
+    body: JSON.stringify({
+      salesman_id: salesmanId,
+      items: [{ barang_id: barangId, quantity: 4, harga_beli: 60000 }]
+    })
+  });
+  const kulakanId = kulakan.body.data.id;
+  assert.equal(await stokBarang(), stokSebelum + 4);
+
+  const del = await json(`/api/kulakan/${kulakanId}`, {
+    method: 'DELETE',
+    headers: { cookie },
+    body: JSON.stringify({ reason: 'Salah kirim' })
+  });
+  assert.equal(del.res.status, 200);
+  assert.equal(await stokBarang(), stokSebelum);
+
+  const rows = await getAll(
+    "SELECT * FROM stok_mutation WHERE referensi_id = ? AND tipe = 'batal_kulakan'",
+    [kulakanId]
+  );
+  assert.equal(rows.length, 1);
+  assert.equal(rows[0].perubahan, -4);
+  assert.equal(rows[0].stok_sebelum, stokSebelum + 4);
+  assert.equal(rows[0].stok_sesudah, stokSebelum);
+  assert.equal(rows[0].catatan, 'Salah kirim');
+
+  // Endpoint riwayat menampilkan nomor kulakan.
+  const history = await json(`/api/barang/${barangId}/mutasi?limit=10`, { headers: { cookie } });
+  const batal = history.body.data.items.find(row => row.tipe === 'batal_kulakan');
+  assert.equal(batal.nomor_referensi, kulakan.body.data.nomor_kulakan);
+});
+
+test('void kedua dan replay idempotensi tidak menambah ledger', async () => {
+  const stokSebelum = await stokBarang();
+  const kulakan = await json('/api/kulakan', {
+    method: 'POST',
+    headers: { cookie },
+    body: JSON.stringify({
+      salesman_id: salesmanId,
+      items: [{ barang_id: barangId, quantity: 2, harga_beli: 60000 }]
+    })
+  });
+  const kulakanId = kulakan.body.data.id;
+  assert.equal(await stokBarang(), stokSebelum + 2);
+
+  const del1 = await json(`/api/kulakan/${kulakanId}`, {
+    method: 'DELETE',
+    headers: { cookie },
+    body: JSON.stringify({ reason: 'Test' })
+  });
+  assert.equal(del1.body.data.already_voided, false);
+  assert.equal(await stokBarang(), stokSebelum);
+  const afterFirst = await getAll(
+    "SELECT * FROM stok_mutation WHERE referensi_id = ? AND tipe = 'batal_kulakan'",
+    [kulakanId]
+  );
+  assert.equal(afterFirst.length, 1);
+
+  const del2 = await json(`/api/kulakan/${kulakanId}`, {
+    method: 'DELETE',
+    headers: { cookie },
+    body: JSON.stringify({ reason: 'Test' })
+  });
+  assert.equal(del2.body.data.already_voided, true);
+  const afterSecond = await getAll(
+    "SELECT * FROM stok_mutation WHERE referensi_id = ? AND tipe = 'batal_kulakan'",
+    [kulakanId]
+  );
+  assert.equal(afterSecond.length, 1);
+
+  // Replay idempotensi.
+  const payload = {
+    salesman_id: salesmanId,
+    items: [{ barang_id: barangId, quantity: 1, harga_beli: 60000 }]
+  };
+  const first = await json('/api/kulakan', {
+    method: 'POST',
+    headers: { cookie, 'Idempotency-Key': 'stok-kulakan-key' },
+    body: JSON.stringify(payload)
+  });
+  assert.equal(first.res.status, 201);
+  const before = await getAll(
+    "SELECT * FROM stok_mutation WHERE referensi_id = ? AND tipe = 'kulakan'",
+    [first.body.data.id]
+  );
+  assert.equal(before.length, 1);
+
+  const second = await json('/api/kulakan', {
+    method: 'POST',
+    headers: { cookie, 'Idempotency-Key': 'stok-kulakan-key' },
+    body: JSON.stringify(payload)
+  });
+  assert.equal(second.res.status, 201);
+  assert.equal(second.body.data.id, first.body.data.id);
+  const after = await getAll(
+    "SELECT * FROM stok_mutation WHERE referensi_id = ? AND tipe = 'kulakan'",
+    [first.body.data.id]
+  );
+  assert.equal(after.length, 1);
 });

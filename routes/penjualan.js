@@ -2,6 +2,7 @@ const crypto = require('crypto');
 const express = require('express');
 const { getAll, getOne, run, withWriteTransaction } = require('../db/query');
 const { success, fail } = require('../utils/response');
+const { updateStockWithMutation } = require('../utils/stock');
 const {
   ValidationError,
   requirePositiveInteger,
@@ -154,19 +155,6 @@ router.post('/', async (req, res) => {
         details.push({ ...item, nama: product.nama });
       }
 
-      // Stok: kurangi dalam transaksi yang sama. Stok boleh minus (mis. barang
-      // dijual lebih dulu, diinput ke sistem belakangan).
-      const qtyByProduct = new Map();
-      for (const detail of details) {
-        qtyByProduct.set(detail.barang_id, (qtyByProduct.get(detail.barang_id) || 0) + detail.quantity);
-      }
-      for (const [productId, qty] of qtyByProduct) {
-        await transaction.execute({
-          sql: 'UPDATE master_barang SET stok = stok - ?, updated_at = ? WHERE id = ?',
-          args: [qty, now, productId]
-        });
-      }
-
       const temporaryNumber = `TMP-${requestId || crypto.randomUUID()}`;
       const insertHeader = await transaction.execute({
         sql: `
@@ -181,6 +169,25 @@ router.post('/', async (req, res) => {
         sql: 'UPDATE penjualan SET nomor_nota = ? WHERE id = ?',
         args: [noteNumber, saleId]
       });
+
+      // Stok: kurangi dalam transaksi yang sama dan tulis satu ledger agregat
+      // per barang. Stok boleh minus (mis. barang dijual lebih dulu, diinput
+      // ke sistem belakangan).
+      const qtyByProduct = new Map();
+      for (const detail of details) {
+        qtyByProduct.set(detail.barang_id, (qtyByProduct.get(detail.barang_id) || 0) + detail.quantity);
+      }
+      for (const [productId, qty] of qtyByProduct) {
+        const mutation = await updateStockWithMutation(transaction, {
+          barangId: productId,
+          mode: 'delta',
+          amount: -qty,
+          type: 'penjualan',
+          referenceId: saleId,
+          timestamp: now
+        });
+        if (!mutation) throw new BusinessError(400, `Barang ID ${productId} tidak ditemukan`);
+      }
 
       const detailPlaceholders = details.map(() => '(?, ?, ?, ?, ?, NULL, ?, ?)').join(', ');
       const detailArgs = details.flatMap(detail => [
@@ -298,12 +305,22 @@ router.delete('/:id', async (req, res) => {
       });
 
       let stokDikembalikan = 0;
+      const qtyByProduct = new Map();
       for (const detail of details) {
         if (detail.barang_id == null) continue;
-        await transaction.execute({
-          sql: 'UPDATE master_barang SET stok = stok + ?, updated_at = ? WHERE id = ?',
-          args: [detail.quantity, now, detail.barang_id]
+        qtyByProduct.set(detail.barang_id, (qtyByProduct.get(detail.barang_id) || 0) + detail.quantity);
+      }
+      for (const [productId, qty] of qtyByProduct) {
+        const mutation = await updateStockWithMutation(transaction, {
+          barangId: productId,
+          mode: 'delta',
+          amount: qty,
+          type: 'batal_penjualan',
+          referenceId: id,
+          note: reason,
+          timestamp: now
         });
+        if (!mutation) throw new BusinessError(400, `Barang ID ${productId} tidak ditemukan`);
         stokDikembalikan += 1;
       }
       return { voided: true, already_voided: false, stok_dikembalikan: stokDikembalikan };

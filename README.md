@@ -5,7 +5,7 @@ Aplikasi kasir sederhana berbasis web untuk warung sembako kecil. Mendukung penj
 ## Fitur Utama
 - Login admin sederhana
 - Master barang: nama, harga retail, harga grosir opsional, arsip
-- Stok: otomatis bertambah saat kulakan & berkurang saat penjualan; opname manual per barang; penjualan dibatasi stok tersedia (peringatan + 409 dari server). Panduan pemakaian: `docs/panduan-stok.md`
+- Stok: otomatis bertambah saat kulakan & berkurang saat penjualan; opname manual per barang; penjualan tetap diperbolehkan meski stok tidak mencukupi sehingga stok dapat menjadi minus. Master Barang juga menyediakan batas stok minimum global, filter & badge kondisi stok (Minus/Habis/Menipis/Aman), dan riwayat mutasi stok per barang. Panduan pemakaian: `docs/panduan-stok.md`
 - Master salesman: tambah, edit, cari, arsip, dan aktifkan kembali nama salesman
 - Penjualan master-detail: status Retail/Grosir pada header transaksi, harga detail dapat disesuaikan, preview dan cetak nota thermal 58 mm
 - Kulakan master-detail berdasarkan salesman dan master barang; total langsung mengurangi kas
@@ -121,10 +121,13 @@ Database akan ter-inisialisasi otomatis saat build via `vercel-build` script. **
 │   └── init.js         # Bootstrap schema + seed + migrations
 ├── middleware/
 │   └── auth.js         # Session management (async)
+├── utils/
+│   ├── stock.js        # Klasifikasi kondisi stok + helper mutasi ledger
+│   └── ...             # Response, validasi, tanggal, env
 ├── routes/
 │   ├── auth.js         # Login/logout/me
 │   ├── setting.js      # Nama warung
-│   ├── barang.js       # Master barang + harga retail/grosir
+│   ├── barang.js       # Master barang + stok (config, filter, riwayat mutasi)
 │   ├── salesman.js     # Master nama salesman
 │   ├── kulakan.js      # Kulakan master-detail
 │   ├── penjualan.js    # Penjualan master-detail + nota

@@ -1363,3 +1363,61 @@ button[data-loading="true"] .btn-label { opacity: 0.85; }
   font-size: var(--fs-small);
   margin: 0;
 }
+
+/* === Stock Management (Master Barang) === */
+
+.stock-limit-control {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.stock-limit-control input {
+  min-width: 0;
+}
+
+.badge-stock-minus {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.badge-stock-empty {
+  background: #f3f4f6;
+  color: #374151;
+}
+
+.badge-stock-low {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.badge-stock-safe {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.stock-history-list {
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
+.stock-history-item {
+  padding: 12px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.stock-history-item:last-child {
+  border-bottom: none;
+}
+
+.stock-delta-positive {
+  color: var(--good);
+}
+
+.stock-delta-negative {
+  color: var(--danger);
+}
+
+.modal-wide {
+  max-width: 520px;
+}

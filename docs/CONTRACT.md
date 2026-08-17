@@ -89,19 +89,39 @@ Field:
 | `nama` | Wajib, unik tanpa membedakan kapital/spasi ganda, maksimal 100 karakter |
 | `harga_retail` | Integer positif |
 | `harga_grosir` | Opsional, integer positif dan tidak melebihi harga retail |
-| `stok` | Integer ≥ 0; diubah otomatis oleh kulakan/penjualan/void dan opname manual |
+| `stok` | Integer; dapat minus akibat transaksi (penjualan/void kulakan); opname manual tetap minimal 0 |
 | `aktif` | `1` aktif, `0` diarsipkan |
 
 Endpoint:
 
 | Method | Endpoint | Keterangan |
 |---|---|---|
-| GET | `/api/barang?status=aktif&q=` | Daftar/filter master barang |
+| GET | `/api/barang?status=aktif&q=&kondisi_stok=` | Daftar/filter master barang; setiap item menyertakan `kondisi_stok` (`minus`/`habis`/`menipis`/`aman`) |
 | POST | `/api/barang` | Tambah barang |
 | PUT | `/api/barang/:id` | Ubah nama dan harga |
-| PUT | `/api/barang/:id/stok` | Opname stok `{ stok, catatan? }`; stok ≥ 0; tercatat di `stok_adjustment` |
+| PUT | `/api/barang/:id/stok` | Opname stok `{ stok, catatan? }`; stok ≥ 0; tercatat di `stok_adjustment` dan ledger `stok_mutation` |
+| GET | `/api/barang/stok-config` | Ambil batas stok minimum global `{ stok_minimum }` |
+| PUT | `/api/barang/stok-config` | Simpan batas stok minimum global `{ stok_minimum }`; bilangan bulat minimal 1 |
+| GET | `/api/barang/:id/mutasi?limit=20&offset=0` | Riwayat mutasi stok per barang, terbaru dahulu |
 | DELETE | `/api/barang/:id` | Arsipkan tanpa menghapus histori |
 | POST | `/api/barang/:id/aktifkan` | Aktifkan kembali barang |
+
+Batas stok minimum global bernilai awal `5` dan disimpan di tabel `setting` (key `stok_minimum`). Filter `kondisi_stok` dapat digabung dengan `status` dan `q`; nilai tidak dikenal menghasilkan `400`.
+
+Setiap mutasi stok (penjualan, kulakan, pembatalan keduanya, dan opname) ditulis atomik ke tabel append-only `stok_mutation` dalam transaksi yang sama dengan perubahan stok dan transaksi bisnisnya. Riwayat hanya mencatat mutasi sejak fitur dirilis; transaksi lama tidak direkonstruksi. Tipe ledger: `penjualan`, `kulakan`, `batal_penjualan`, `batal_kulakan`, `opname`.
+
+Respons riwayat mutasi:
+
+```json
+{
+  "success": true,
+  "data": {
+    "items": [],
+    "pagination": { "limit": 20, "offset": 0, "has_more": false }
+  },
+  "message": null
+}
+```
 
 UI penjualan menyediakan pilihan eksplisit `Retail` atau `Grosir` jika barang memiliki harga grosir. Harga satuan tetap dapat disesuaikan sebagai harga khusus sebelum transaksi disimpan.
 
@@ -159,7 +179,7 @@ Header opsional `Idempotency-Key` didukung.
 
 `jenis_harga` (`retail` | `grosir`) berada pada header penjualan dan berlaku untuk seluruh detail berdasarkan `penjualan_id`. Harga per barang tetap dapat disesuaikan. Saat header Grosir dipilih, UI memakai harga grosir master jika tersedia dan fallback ke harga retail jika tidak tersedia. Server mengambil nama barang aktif dari master lalu menyimpan nama, harga, quantity, dan subtotal sebagai snapshot detail. Nomor nota dibuat otomatis dengan format `PJ-YYYYMMDD-ID`.
 
-**Stok:** Penjualan mengurangi stok master barang sesuai quantity dalam transaksi yang sama. Jika quantity melebihi stok tersedia, respons **409** `Stok <nama> tidak cukup (sisa <n>)` dan tidak ada perubahan. Pembatalan penjualan (void) mengembalikan stok; void dua kali tidak mengembalikan dua kali. Transaksi pemasukan lama (standalone) tidak menyentuh stok.
+**Stok:** Penjualan mengurangi stok master barang sesuai quantity dalam transaksi yang sama. Penjualan tetap diperbolehkan meskipun quantity melebihi stok tersedia, sehingga stok dapat menjadi minus. Ini mendukung kasus barang terjual lebih dulu lalu dicatat atau stok fisik belum sempat diinput. Pembatalan penjualan (void) mengembalikan stok; void dua kali tidak mengembalikan dua kali. Transaksi pemasukan lama (standalone) tidak menyentuh stok. Stok minus dapat diperbaiki melalui opname manual di Master Barang.
 
 #### GET `/api/penjualan?dari=&sampai=`
 
@@ -400,7 +420,7 @@ Menghasilkan JSON dari satu consistent read transaction. Metadata backup:
 | `counts` | Jumlah record setiap tabel |
 | `checksum_sha256` | Checksum bagian data backup |
 
-Backup mencakup master barang, master salesman, header/detail penjualan dan kulakan, transaksi aktif, dan transaksi yang dibatalkan. Restore tidak disediakan sebagai endpoint HTTP; jalankan dari lingkungan tepercaya:
+Backup mencakup master barang, master salesman, header/detail penjualan dan kulakan, transaksi aktif, transaksi yang dibatalkan, riwayat opname (`stok_adjustment`), dan ledger mutasi stok (`stok_mutation`, schema v9+). Restore tidak disediakan sebagai endpoint HTTP; jalankan dari lingkungan tepercaya:
 
 ```bash
 RESTORE_CONFIRM=RESTORE_KASIR_MINI npm run db:restore -- path/backup.json

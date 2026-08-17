@@ -1,6 +1,7 @@
 const express = require('express');
 const { getAll, getOne, run, withWriteTransaction } = require('../db/query');
 const { success, fail } = require('../utils/response');
+const { STOCK_CONDITIONS, classifyStock, updateStockWithMutation } = require('../utils/stock');
 const {
   ValidationError,
   requireString,
@@ -14,6 +15,7 @@ const { getNowWib } = require('../utils/date');
 
 const router = express.Router();
 const VALID_STATUSES = new Set(['aktif', 'arsip', 'semua']);
+const DEFAULT_STOK_MINIMUM = 5;
 const PUBLIC_COLUMNS = `
   id, nama, harga_retail, harga_grosir, stok,
   aktif, created_at, updated_at, archived_at
@@ -52,6 +54,21 @@ function isUniqueError(err) {
   return String(err?.message || '').toLowerCase().includes('unique');
 }
 
+const DEFAULT_LIMIT = 20;
+const MAX_LIMIT = 100;
+
+function parseLimit(value) {
+  if (value === undefined || value === '') return DEFAULT_LIMIT;
+  const limit = requirePositiveInteger(value, 'Limit');
+  if (limit > MAX_LIMIT) throw new ValidationError('Limit maksimal 100');
+  return limit;
+}
+
+function parseOffset(value) {
+  if (value === undefined || value === '') return 0;
+  return requireNonNegativeInteger(value, 'Offset');
+}
+
 router.get('/', async (req, res) => {
   try {
     const status = req.query.status === undefined ? 'aktif' : req.query.status;
@@ -63,6 +80,13 @@ router.get('/', async (req, res) => {
       : requireString(req.query.q, 'Pencarian');
     if (search.length > 100) throw new ValidationError('Pencarian maksimal 100 karakter');
 
+    const stockCondition = req.query.kondisi_stok === undefined ? 'semua' : req.query.kondisi_stok;
+    if (typeof stockCondition !== 'string' || !STOCK_CONDITIONS.has(stockCondition)) {
+      throw new ValidationError('Kondisi stok tidak valid');
+    }
+    const stockConfig = await getOne("SELECT value FROM setting WHERE key = 'stok_minimum'");
+    const stockMinimum = Number(stockConfig?.value || DEFAULT_STOK_MINIMUM);
+
     const conditions = [];
     const params = [];
     if (status === 'aktif') conditions.push('aktif = 1');
@@ -70,6 +94,16 @@ router.get('/', async (req, res) => {
     if (search) {
       conditions.push('instr(nama_normalized, ?) > 0');
       params.push(normalizeName(search));
+    }
+    if (stockCondition === 'minus') conditions.push('stok < 0');
+    if (stockCondition === 'habis') conditions.push('stok = 0');
+    if (stockCondition === 'menipis') {
+      conditions.push('stok >= 1 AND stok <= ?');
+      params.push(stockMinimum);
+    }
+    if (stockCondition === 'aman') {
+      conditions.push('stok > ?');
+      params.push(stockMinimum);
     }
 
     const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
@@ -79,11 +113,40 @@ router.get('/', async (req, res) => {
       ${where}
       ORDER BY aktif DESC, nama COLLATE NOCASE ASC
     `, params);
-    return success(res, items);
+    return success(res, items.map(item => ({
+      ...item,
+      kondisi_stok: classifyStock(Number(item.stok || 0), stockMinimum)
+    })));
   } catch (err) {
     if (err instanceof ValidationError) return fail(res, 400, err.message);
     console.error(err);
     return fail(res, 500, 'Gagal mengambil master barang');
+  }
+});
+
+// Batas stok minimum global. Harus didaftarkan sebelum route dengan /:id.
+router.get('/stok-config', async (_req, res) => {
+  try {
+    const row = await getOne("SELECT value FROM setting WHERE key = 'stok_minimum'");
+    return success(res, { stok_minimum: Number(row?.value || DEFAULT_STOK_MINIMUM) });
+  } catch (err) {
+    console.error(err);
+    return fail(res, 500, 'Gagal mengambil batas stok minimum');
+  }
+});
+
+router.put('/stok-config', async (req, res) => {
+  try {
+    const minimum = requirePositiveInteger(req.body?.stok_minimum, 'Batas stok minimum');
+    await run(
+      'INSERT INTO setting (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value',
+      ['stok_minimum', String(minimum)]
+    );
+    return success(res, { stok_minimum: minimum });
+  } catch (err) {
+    if (err instanceof ValidationError) return fail(res, 400, err.message);
+    console.error(err);
+    return fail(res, 500, 'Gagal memperbarui batas stok minimum');
   }
 });
 
@@ -155,23 +218,26 @@ router.put('/:id/stok', async (req, res) => {
     const now = getNowWib();
 
     const result = await withWriteTransaction(async (transaction) => {
-      const current = await transaction.execute({
-        sql: 'SELECT id, stok FROM master_barang WHERE id = ?',
-        args: [id]
+      const mutation = await updateStockWithMutation(transaction, {
+        barangId: id,
+        mode: 'set',
+        amount: stok,
+        type: 'opname',
+        note: catatan,
+        timestamp: now
       });
-      const row = current.rows[0] || null;
-      if (!row) throw new BusinessError(404, 'ID tidak ditemukan');
-      const stokSebelum = Number(row.stok || 0);
+      if (!mutation) throw new BusinessError(404, 'ID tidak ditemukan');
 
       await transaction.execute({
         sql: 'INSERT INTO stok_adjustment (barang_id, stok_sebelum, stok_sesudah, catatan) VALUES (?, ?, ?, ?)',
-        args: [id, stokSebelum, stok, catatan]
+        args: [id, mutation.stok_sebelum, mutation.stok_sesudah, catatan]
       });
-      await transaction.execute({
-        sql: 'UPDATE master_barang SET stok = ?, updated_at = ? WHERE id = ?',
-        args: [stok, now, id]
-      });
-      return { id, stok_sebelum: stokSebelum, stok_sesudah: stok, catatan };
+      return {
+        id,
+        stok_sebelum: mutation.stok_sebelum,
+        stok_sesudah: mutation.stok_sesudah,
+        catatan
+      };
     });
 
     return success(res, result);
@@ -180,6 +246,53 @@ router.put('/:id/stok', async (req, res) => {
     if (err instanceof BusinessError) return fail(res, err.status, err.message);
     console.error(err);
     return fail(res, 500, 'Gagal memperbarui stok');
+  }
+});
+
+// Riwayat mutasi stok per barang, terbaru dahulu.
+router.get('/:id/mutasi', async (req, res) => {
+  try {
+    const id = requirePositiveId(req.params.id);
+    const limit = parseLimit(req.query.limit);
+    const offset = parseOffset(req.query.offset);
+
+    const existing = await getOne('SELECT id FROM master_barang WHERE id = ?', [id]);
+    if (!existing) return fail(res, 404, 'ID tidak ditemukan');
+
+    const rows = await getAll(`
+      SELECT
+        m.id, m.barang_id, m.tipe, m.perubahan, m.stok_sebelum,
+        m.stok_sesudah, m.referensi_id, m.catatan, m.tanggal,
+        CASE
+          WHEN m.tipe IN ('penjualan', 'batal_penjualan') THEN p.nomor_nota
+          WHEN m.tipe IN ('kulakan', 'batal_kulakan') THEN k.nomor_kulakan
+          ELSE NULL
+        END AS nomor_referensi
+      FROM stok_mutation m
+      LEFT JOIN penjualan p
+        ON m.tipe IN ('penjualan', 'batal_penjualan') AND p.id = m.referensi_id
+      LEFT JOIN kulakan k
+        ON m.tipe IN ('kulakan', 'batal_kulakan') AND k.id = m.referensi_id
+      WHERE m.barang_id = ?
+      ORDER BY m.tanggal DESC, m.id DESC
+      LIMIT ? OFFSET ?
+    `, [id, limit + 1, offset]);
+
+    const items = rows.slice(0, limit).map(row => ({
+      ...row,
+      perubahan: Number(row.perubahan),
+      stok_sebelum: Number(row.stok_sebelum),
+      stok_sesudah: Number(row.stok_sesudah),
+      referensi_id: row.referensi_id != null ? Number(row.referensi_id) : null
+    }));
+    return success(res, {
+      items,
+      pagination: { limit, offset, has_more: rows.length > limit }
+    });
+  } catch (err) {
+    if (err instanceof ValidationError) return fail(res, 400, err.message);
+    console.error(err);
+    return fail(res, 500, 'Gagal mengambil riwayat stok');
   }
 });
 

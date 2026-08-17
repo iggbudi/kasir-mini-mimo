@@ -66,6 +66,23 @@
             <option value="semua">Semua</option>
           </select>
         </div>
+        <div style="max-width:150px;">
+          <label for="kondisiStok">Kondisi Stok</label>
+          <select id="kondisiStok">
+            <option value="semua">Semua</option>
+            <option value="minus">Minus</option>
+            <option value="habis">Habis</option>
+            <option value="menipis">Menipis</option>
+            <option value="aman">Aman</option>
+          </select>
+        </div>
+        <div>
+          <label for="stokMinimum">Batas Stok Minimum</label>
+          <div class="stock-limit-control">
+            <input id="stokMinimum" type="number" min="1" inputmode="numeric" value="5">
+            <button type="button" class="secondary" id="btnSaveStokMinimum">Simpan</button>
+          </div>
+        </div>
       </div>
       <div id="list" class="list mt-3"></div>
     </section>

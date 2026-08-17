@@ -13,6 +13,7 @@ const V4_DATA_KEYS = [...V3_DATA_KEYS, 'penjualan'];
 const V5_DATA_KEYS = [...V4_DATA_KEYS, 'master_salesman'];
 const DATA_KEYS = [...V5_DATA_KEYS, 'kulakan', 'kulakan_item'];
 const V8_DATA_KEYS = [...DATA_KEYS, 'stok_adjustment'];
+const V9_DATA_KEYS = [...V8_DATA_KEYS, 'stok_mutation'];
 const nullable = value => value ?? null;
 
 function readBackup(filename) {
@@ -23,17 +24,19 @@ function readBackup(filename) {
     throw new Error('Format backup tidak dikenali');
   }
   const backupVersion = Number(backup.schema_version);
-  const checksumKeys = backupVersion >= 8
-    ? V8_DATA_KEYS
-    : backupVersion >= 6
-      ? DATA_KEYS
-      : backupVersion >= 5
-        ? V5_DATA_KEYS
-        : backupVersion >= 4
-          ? V4_DATA_KEYS
-          : backupVersion >= 3
-            ? V3_DATA_KEYS
-            : LEGACY_DATA_KEYS;
+  const checksumKeys = backupVersion >= 9
+    ? V9_DATA_KEYS
+    : backupVersion >= 8
+      ? V8_DATA_KEYS
+      : backupVersion >= 6
+        ? DATA_KEYS
+        : backupVersion >= 5
+          ? V5_DATA_KEYS
+          : backupVersion >= 4
+            ? V4_DATA_KEYS
+            : backupVersion >= 3
+              ? V3_DATA_KEYS
+              : LEGACY_DATA_KEYS;
   for (const key of checksumKeys) {
     if (!Array.isArray(backup[key])) throw new Error(`Data backup ${key} tidak valid`);
     if (Number(backup.counts?.[key]) !== backup[key].length) {
@@ -51,6 +54,7 @@ function readBackup(filename) {
   if (!Array.isArray(backup.kulakan)) backup.kulakan = [];
   if (!Array.isArray(backup.kulakan_item)) backup.kulakan_item = [];
   if (!Array.isArray(backup.stok_adjustment)) backup.stok_adjustment = [];
+  if (!Array.isArray(backup.stok_mutation)) backup.stok_mutation = [];
   return backup;
 }
 
@@ -62,6 +66,7 @@ async function restoreBackup(backup) {
   }
 
   const statements = [
+    'DELETE FROM stok_mutation',
     'DELETE FROM stok_adjustment',
     'DELETE FROM kulakan_item',
     'DELETE FROM kulakan',
@@ -115,6 +120,22 @@ async function restoreBackup(backup) {
       `,
       args: [
         row.id, row.barang_id, row.stok_sebelum, row.stok_sesudah,
+        nullable(row.catatan), row.tanggal
+      ]
+    });
+  }
+
+  for (const row of backup.stok_mutation) {
+    statements.push({
+      sql: `
+        INSERT INTO stok_mutation
+          (id, barang_id, tipe, perubahan, stok_sebelum, stok_sesudah,
+           referensi_id, catatan, tanggal)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `,
+      args: [
+        row.id, row.barang_id, row.tipe, row.perubahan,
+        row.stok_sebelum, row.stok_sesudah, nullable(row.referensi_id),
         nullable(row.catatan), row.tanggal
       ]
     });
@@ -223,6 +244,7 @@ async function restoreBackup(backup) {
   }
   statements.push("INSERT OR IGNORE INTO setting (key, value) VALUES ('nama_warung', 'Warung Saya')");
   statements.push("INSERT OR IGNORE INTO setting (key, value) VALUES ('timezone', 'Asia/Jakarta')");
+  statements.push("INSERT OR IGNORE INTO setting (key, value) VALUES ('stok_minimum', '5')");
 
   // db.batch(..., 'write') dieksekusi server-side dalam satu implicit transaction.
   await batch(statements);
