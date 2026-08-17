@@ -9,6 +9,10 @@ atau melakukan deploy.
 - Aplikasi kasir web (warung kecil): Express + @libsql/client (Turso/SQLite),
   frontend vanilla HTML/CSS/JS tanpa framework, di-deploy ke Vercel
   (auto-deploy dari push ke GitHub `main`).
+- **Alternatif deploy:** VPS (nginx + systemd) — contoh konfigurasi di
+  `deploy/` (unit `kasir-mini.service` + vhost `nginx-kasir-mini.conf`),
+  dipakai untuk `tanisubur.nanariset.my.id`. Panduan lengkap di
+  `README.md` → "Deploy ke VPS".
 - Struktur utama: `server.js`, `routes/`, `db/`, `utils/`, `public/`,
   `tests/` (node:test). Detail arsitektur: `README.md`, `docs/CONTRACT.md`.
 
@@ -58,6 +62,12 @@ update *sampai* ke pengguna; bump memastikan aset baru *benar-benar dimuat*.
 2. Test UI `tests/ui/barang-stock-management.test.js` mengecek versi cache
    (regex `kasir-mini-vNN`) — pastikan test ikut diperbarui agar lulus.
 3. Jalankan `npm test` sebelum push.
+4. **Deploy VPS:** app jalan sebagai service systemd `kasir-mini` (port 3001)
+   di balik nginx. Setelah `git pull` di server, restart service:
+   `sudo systemctl restart kasir-mini`. Perubahan hanya di `public/` tidak
+   perlu restart (nginx menyajikan langsung dari disk), tapi bump cache SW
+   tetap wajib. HTTPS/SSL dikelola certbot (auto-renew) — jangan menimpa
+   konfigurasi nginx di `sites-available` setelah certbot memodifikasinya.
 
 ## ✅ Commit & Push Setiap Selesai Perubahan
 

@@ -88,6 +88,78 @@ Setelah deploy pertama kali, jalankan init via Vercel:
 ```
 Database akan ter-inisialisasi otomatis saat build via `vercel-build` script. **Build production GAGAL jika `ADMIN_PASSWORD` tidak diset** (safety net — tidak lagi memakai default `admin123`). Jika `ADMIN_PASSWORD` diubah, deploy ulang agar hash password admin ikut diperbarui.
 
+## Deploy ke VPS (nginx + systemd)
+
+Alternatif selain Vercel: jalankan di VPS sendiri dengan nginx sebagai reverse proxy
+dan systemd sebagai process manager. Contoh konfigurasi sudah disediakan di
+folder `deploy/` (dipakai untuk `tanisubur.nanariset.my.id`).
+
+### 1. Prasyarat
+
+- Ubuntu 22.04/24.04, Node.js 18+ (via nvm atau distro), `node_modules` sudah
+  terinstall (`npm install`), dan `.env` sudah diisi (`TURSO_DATABASE_URL`,
+  `TURSO_AUTH_TOKEN`, `ADMIN_USERNAME`, `ADMIN_PASSWORD`).
+- Domain sudah diarahkan (A record) ke IP VPS.
+- nginx dan certbot terinstall:
+  ```bash
+  sudo apt-get update
+  sudo apt-get install -y nginx certbot python3-certbot-nginx
+  ```
+
+### 2. Service systemd
+
+Salin `deploy/kasir-mini.service` ke `/etc/systemd/system/`, sesuaikan path
+Node jika bukan dari nvm, lalu:
+
+```bash
+sudo cp deploy/kasir-mini.service /etc/systemd/system/kasir-mini.service
+sudo systemctl daemon-reload
+sudo systemctl enable --now kasir-mini
+systemctl status kasir-mini
+```
+
+Catatan unit file:
+
+- `WorkingDirectory=/home/ubuntu/kasir-mini-mimo` — sesuaikan dengan lokasi repo.
+- `EnvironmentFile=.../.env` — variabel dari `.env` di-load; karena `.env`
+  berisi `PORT`, service memakai wrapper `export PORT=3001` agar tidak bentrok
+  dengan proses lain di port 3000.
+- `Environment=NODE_ENV=production` — memaksa mode production.
+
+### 3. Vhost nginx
+
+Salin `deploy/nginx-kasir-mini.conf`, ganti `server_name` dan
+`proxy_pass` (port sesuai service), lalu:
+
+```bash
+sudo cp deploy/nginx-kasir-mini.conf /etc/nginx/sites-available/kasir-mini
+sudo ln -sf /etc/nginx/sites-available/kasir-mini /etc/nginx/sites-enabled/kasir-mini
+sudo nginx -t
+sudo systemctl reload nginx
+```
+
+> ⚠️ **Jangan menimpa konfigurasi di `sites-available` setelah certbot**
+> memodifikasinya — block 443/SSL buatan certbot akan hilang dan HTTPS mati.
+> Jika terlanjur, jalankan ulang `sudo certbot --nginx -d domain` atau tulis
+> block 443 lengkap seperti di `deploy/nginx-kasir-mini.conf`.
+
+### 4. SSL Let's Encrypt
+
+```bash
+sudo certbot --nginx -d DOMAIN_ANDA --redirect --non-interactive --agree-tos --register-unsafely-without-email
+```
+
+Auto-renew ditangani `certbot.timer` (sudah aktif otomatis). Verifikasi:
+`sudo certbot renew --dry-run`.
+
+### 5. Verifikasi
+
+```bash
+curl -s https://DOMAIN_ANDA/api/health        # {"status":"ok","db":"connected"}
+curl -sI https://DOMAIN_ANDA | head -3        # 302 → /login.html
+systemctl is-active kasir-mini nginx          # active active
+```
+
 ## Environment Variables
 
 | Variable | Required | Default | Deskripsi |
