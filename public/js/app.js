@@ -37,7 +37,7 @@ async function apiFetch(url, options = {}) {
 }
 
 async function logout() {
-  // Pakai top-level navigation agar Set-Cookie clear dari server konsisten di mobile/PWA/Vercel.
+  // Pakai top-level navigation agar Set-Cookie clear dari server konsisten di mobile/PWA.
   // Fetch logout bisa gagal/ter-cache/terinterupsi lalu login page menganggap session masih aktif.
   location.replace('/logout');
 }

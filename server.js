@@ -23,8 +23,8 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 const publicDir = path.join(__dirname, 'public');
 
-// Vercel menaruh IP asli klien di X-Forwarded-For; trust proxy 1 membuat
-// req.ip akurat (dipakai rate limit login).
+// Trust proxy: VPS/CDN menaruh IP asli klien di X-Forwarded-For; trust proxy
+// 1 membuat req.ip akurat (dipakai rate limit login).
 app.set('trust proxy', 1);
 
 // CSP parsial: blokir skrip eksternal/injection ke domain lain, plugin,

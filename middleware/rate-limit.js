@@ -1,10 +1,10 @@
 /**
  * Rate limiter untuk endpoint login (in-memory, per instance).
  *
- * Cukup untuk 1 instance serverless (Vercel) dan melindungi akun admin
- * tunggal dari brute force. State per IP disimpan di Map dan dibersihkan
- * secara lazy: entri yang sudah melewati window akan dihapus saat ada
- * request berikutnya dari IP yang sama.
+ * Cukup untuk 1 instance VPS dan melindungi akun admin tunggal dari brute
+ * force. State per IP disimpan di Map dan dibersihkan secara lazy: entri yang
+ * sudah melewati window akan dihapus saat ada request berikutnya dari IP yang
+ * sama.
  *
  * Konfigurasi via environment (default 5 percobaan / 15 menit / lock 15 menit):
  *   LOGIN_MAX_ATTEMPTS — jumlah percobaan gagal sebelum lockout

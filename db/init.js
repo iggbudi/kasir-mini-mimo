@@ -107,7 +107,7 @@ async function initDb() {
   if (!existing && process.env.NODE_ENV === 'production' && !process.env.ADMIN_PASSWORD) {
     throw new Error(
       'ADMIN_PASSWORD wajib diset saat production. ' +
-      'Jalankan: vercel env add ADMIN_PASSWORD, lalu deploy ulang.'
+      'Set ADMIN_PASSWORD di .env, lalu jalankan db:init ulang.'
     );
   }
 
