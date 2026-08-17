@@ -1,7 +1,7 @@
 # Rencana Fitur Stok — Kasir Mini
 
 **Tanggal:** 2026-08-05
-**Status:** Direncanakan (belum dieksekusi)
+**Status:** Implementasi v8 dan penyempurnaan v9 selesai di branch ini
 **Latar belakang:** Diskusi dengan pemilik warung. Aplikasi saat ini tidak punya pencatatan inventory (dikecualikan di prd2, lihat docs/CONTRACT.md). Data jumlah barang di tiap transaksi (detail penjualan & kulakan) sudah tercatat, sehingga stok bisa dihitung dari transaksi.
 
 ---
@@ -151,5 +151,18 @@ Catatan: `PRAGMA table_info` pattern yang sudah ada di `db/migrations.js` dipaka
 - [x] Kulakan: stok naik otomatis; void mengurangi (boleh minus) — `routes/kulakan.js` + `tests/api/kulakan-stok.test.js`
 - [x] Opname: PUT `/api/barang/:id/stok` dengan validasi & riwayat — `routes/barang.js` + `tests/api/barang-opname.test.js`
 - [x] UI: Master Barang (stok + Isi Stok + badge Habis), Jual (stok tersedia + batasan + peringatan), Kulakan (tampil stok) — `barang.js`, `pemasukan.js`, `kulakan.js`, `app.js` (promptNumber), `style.css`, `sw.js` v17
-- [ ] Test baru hijau; test lama tidak rusak — **belum dieksekusi di Termux** (libsql tolak Android); hanya `node --check`
+- [x] Test stok baru dan regresi terkait lulus di environment branch; full suite saat dokumentasi dijalankan: 140 lulus, 1 gagal pada assertion landing page login yang tidak terkait stok.
 - [x] Dokumentasi (CONTRACT.md + README) diperbarui
+
+---
+
+## Penyempurnaan v9 — Batas, Kondisi, dan Riwayat Stok
+
+Status: **selesai dan teruji** di branch ini.
+
+- Batas minimum global disimpan pada setting `stok_minimum`, default 5, dan diatur melalui `GET`/`PUT /api/barang/stok-config`.
+- `GET /api/barang` mendukung filter `kondisi_stok` (`semua`, `minus`, `habis`, `menipis`, `aman`) bersama `status` dan `q`; respons item menyertakan `kondisi_stok`.
+- `GET /api/barang/:id/mutasi` menyediakan pagination dengan default `limit=20`, `offset=0`, dan `has_more`.
+- Ledger append-only `stok_mutation` mencatat lima tipe: penjualan, kulakan, batal_penjualan, batal_kulakan, dan opname. Penulisan stok dan ledger dilakukan dalam transaksi yang sama; stok boleh minus, sedangkan opname minimal 0.
+- Master Barang menyediakan badge kondisi, pengaturan batas, dan modal **Riwayat Stok**. Ledger hanya mencatat mutasi setelah fitur dirilis; transaksi lama tidak direkonstruksi.
+- Backup schema v9 menyertakan `stok_mutation`; restore backup v8 tanpa tabel tersebut tetap didukung.

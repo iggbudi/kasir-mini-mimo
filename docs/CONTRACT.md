@@ -89,7 +89,7 @@ Field:
 | `nama` | Wajib, unik tanpa membedakan kapital/spasi ganda, maksimal 100 karakter |
 | `harga_retail` | Integer positif |
 | `harga_grosir` | Opsional, integer positif dan tidak melebihi harga retail |
-| `stok` | Integer ≥ 0; diubah otomatis oleh kulakan/penjualan/void dan opname manual |
+| `stok` | Integer; dapat menjadi minus akibat penjualan atau pembatalan kulakan; opname tetap menerima nilai minimal 0 |
 | `aktif` | `1` aktif, `0` diarsipkan |
 
 Endpoint:
@@ -102,6 +102,27 @@ Endpoint:
 | PUT | `/api/barang/:id/stok` | Opname stok `{ stok, catatan? }`; stok ≥ 0; tercatat di `stok_adjustment` |
 | DELETE | `/api/barang/:id` | Arsipkan tanpa menghapus histori |
 | POST | `/api/barang/:id/aktifkan` | Aktifkan kembali barang |
+| GET | `/api/barang/stok-config` | Ambil batas minimum global (default 5) |
+| PUT | `/api/barang/stok-config` | Simpan `{ "stok_minimum": 5 }`; integer minimal 1 |
+| GET | `/api/barang/:id/mutasi?limit=20&offset=0` | Riwayat mutasi terbaru per barang |
+
+`GET /api/barang` juga menerima `kondisi_stok=semua|minus|habis|menipis|aman` (default `semua`), yang dapat digabung dengan `status` dan `q`. Setiap item mengandung `kondisi_stok`. Nilai `menipis` berarti stok 1 sampai batas minimum; `aman` berarti di atas batas. Nilai filter tidak dikenal menghasilkan 400.
+
+`GET /api/barang/:id/mutasi` menggunakan `limit` default 20 (maksimal 100), `offset` default 0, dan mengembalikan bentuk berikut:
+
+```json
+{
+  "success": true,
+  "data": {
+    "items": [],
+    "pagination": { "limit": 20, "offset": 0, "has_more": false }
+  },
+  "message": null
+}
+```
+Barang tidak ditemukan menghasilkan 404; parameter tidak valid menghasilkan 400. Item diurutkan `tanggal DESC, id DESC` dan memuat `tipe`, `perubahan`, `stok_sebelum`, `stok_sesudah`, `referensi_id`, `catatan`, `tanggal`, serta `nomor_referensi` bila tersedia.
+
+`stok_mutation` memiliki lima tipe ledger: `penjualan`, `kulakan`, `batal_penjualan`, `batal_kulakan`, dan `opname`. Penjualan boleh membuat stok minus; pembatalan kulakan juga boleh membuat stok minus. Opname menulis `stok_adjustment` untuk kompatibilitas dan menerima stok minimal 0, termasuk mutasi dengan perubahan 0.
 
 UI penjualan menyediakan pilihan eksplisit `Retail` atau `Grosir` jika barang memiliki harga grosir. Harga satuan tetap dapat disesuaikan sebagai harga khusus sebelum transaksi disimpan.
 
@@ -400,7 +421,7 @@ Menghasilkan JSON dari satu consistent read transaction. Metadata backup:
 | `counts` | Jumlah record setiap tabel |
 | `checksum_sha256` | Checksum bagian data backup |
 
-Backup mencakup master barang, master salesman, header/detail penjualan dan kulakan, transaksi aktif, dan transaksi yang dibatalkan. Restore tidak disediakan sebagai endpoint HTTP; jalankan dari lingkungan tepercaya:
+Backup mencakup master barang, master salesman, header/detail penjualan dan kulakan, transaksi aktif, transaksi yang dibatalkan, setting batas minimum, `stok_adjustment`, dan `stok_mutation` (schema v9). Restore backup v8 tanpa `stok_mutation` tetap didukung dengan ledger kosong. Restore tidak disediakan sebagai endpoint HTTP; jalankan dari lingkungan tepercaya:
 
 ```bash
 RESTORE_CONFIRM=RESTORE_KASIR_MINI npm run db:restore -- path/backup.json

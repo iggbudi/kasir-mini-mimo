@@ -4,7 +4,11 @@ Panduan singkat untuk pemilik/kasir. Fitur stok mulai berlaku setelah aplikasi d
 
 ---
 
-## 1. Pertama Kali Pakai: Isi Stok Awal
+## 1. Atur Batas dan Isi Stok Awal
+
+Buka **Atur → Master Barang**. Pada bagian **Batas Stok Minimum**, masukkan bilangan bulat minimal 1 lalu tekan **Simpan**. Nilai awalnya 5 dan berlaku global untuk semua barang.
+
+Daftar dapat difilter lewat **Kondisi Stok**: Semua, **Minus**, Habis, **Menipis**, dan Aman. Filter ini dapat dipakai bersama pencarian nama serta status aktif/arsip.
 
 Setelah update, **stok semua barang = 0**. Aplikasi tidak tahu stok lama di warung.
 
@@ -20,15 +24,8 @@ Setelah update, **stok semua barang = 0**. Aplikasi tidak tahu stok lama di waru
 ## 2. Jualan (Penjualan)
 
 - Saat mencari barang, **stok tersedia** ikut terlihat (contoh: "Gula 1kg — Rp17.500 · Stok 12").
-- Jika kamu mengetik jumlah **lebih dari stok**, muncul peringatan:
-  > "Stok Gula 1kg tinggal 12. Jumlah dibatasi ke stok tersedia."
-  
-  Jumlah otomatis dipatok ke stok yang ada. Misalnya stok 12, tidak bisa input 15.
-- Jika stok barang **0**:
-  > "Stok Gula 1kg habis, tidak bisa dijual."
-
-  Barang tidak bisa ditambahkan sampai stoknya diisi (mis. setelah kulakan).
-- Setiap penjualan yang tersimpan **mengurangi stok otomatis**.
+- Penjualan yang tersimpan **mengurangi stok otomatis**. Jika jumlah penjualan melebihi stok, stok boleh menjadi **minus**; ini bukan error.
+- Badge pada kartu membantu membaca kondisi: **Minus** berarti stok < 0, **Habis** berarti 0, **Menipis** berarti 1 sampai batas minimum, dan **Aman** berarti di atas batas minimum.
 
 ---
 
@@ -59,14 +56,18 @@ Isi Stok (opname) dipakai untuk **memperbaiki** angka stok, misalnya:
 - **Stok minus** — akibat membatalkan kulakan yang barangnya sudah laku.
 - **Awal barang baru** — barang lama yang pernah diarsipkan lalu diaktifkan kembali (stoknya mulai dari angka lama; set ulang jika perlu).
 
-Cara: **Master Barang → Isi Stok** pada barang tersebut → ketik angka stok fisik terbaru → Simpan. Setiap kali Isi Stok, aplikasi menyimpan **riwayat perubahannya** (terlihat di file backup).
+Cara: **Master Barang → Isi Stok** pada barang tersebut → ketik angka stok fisik terbaru → Simpan. Setiap kali Isi Stok, aplikasi menyimpan riwayat perubahan.
+
+Untuk melihatnya, tekan **Riwayat Stok** pada kartu barang. Riwayat menampilkan waktu, jenis mutasi, nomor referensi bila tersedia, perubahan, stok sebelum → sesudah, dan catatan. Gunakan **Muat Lagi** untuk mengambil halaman berikutnya.
+
+Riwayat lengkap mulai dicatat setelah pembaruan fitur ini; data transaksi lama tidak direkonstruksi menjadi riwayat mutasi.
 
 ---
 
 ## 6. Catatan Penting
 
 - **Transaksi lama** (sebelum fitur stok aktif) **tidak** memengaruhi stok. Stok mulai dihitung dari Isi Stok pertama.
-- Stok tidak bisa minus dari **penjualan** — aplikasi menolak jual melebihi stok. Stok minus hanya mungkin dari pembatalan kulakan.
+- Stok dapat minus dari **penjualan** atau pembatalan kulakan. Opname tetap hanya menerima angka minimal 0.
 - Backup otomatis menyertakan data stok dan riwayat opname — aman untuk pindah perangkat.
 
 ---

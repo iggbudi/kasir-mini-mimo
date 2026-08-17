@@ -5,7 +5,7 @@ Aplikasi kasir sederhana berbasis web untuk warung sembako kecil. Mendukung penj
 ## Fitur Utama
 - Login admin sederhana
 - Master barang: nama, harga retail, harga grosir opsional, arsip
-- Stok: otomatis bertambah saat kulakan & berkurang saat penjualan; opname manual per barang; penjualan dibatasi stok tersedia (peringatan + 409 dari server). Panduan pemakaian: `docs/panduan-stok.md`
+- Stok: batas minimum global, filter kondisi Minus/Habis/Menipis/Aman, perubahan otomatis dari transaksi, opname manual, dan **Riwayat Stok** per barang. Stok boleh minus sesuai kebijakan transaksi. Panduan pemakaian: `docs/panduan-stok.md`
 - Master salesman: tambah, edit, cari, arsip, dan aktifkan kembali nama salesman
 - Penjualan master-detail: status Retail/Grosir pada header transaksi, harga detail dapat disesuaikan, preview dan cetak nota thermal 58 mm
 - Kulakan master-detail berdasarkan salesman dan master barang; total langsung mengurangi kas
