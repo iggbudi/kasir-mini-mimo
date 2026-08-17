@@ -10,7 +10,7 @@ Buka **Atur → Master Barang**. Pada bagian **Batas Stok Minimum**, masukkan bi
 
 Daftar dapat difilter lewat **Kondisi Stok**: Semua, **Minus**, Habis, **Menipis**, dan Aman. Filter ini dapat dipakai bersama pencarian nama serta status aktif/arsip.
 
-Setelah update, **stok semua barang = 0**. Aplikasi tidak tahu stok lama di warung.
+Stok yang sudah ada **dipertahankan** saat pembaruan v9—pembaruan ini tidak mengosongkan stok. Hanya saat fitur pelacakan stok diaktifkan untuk pertama kalinya, produk lama yang belum pernah memiliki angka stok dimulai dari 0. Ledger riwayat terpadu juga mulai kosong dan tidak merekonstruksi transaksi lama.
 
 1. Buka menu **Atur → Master Barang** (atau menu Master Barang dari Beranda).
 2. Di setiap barang, tekan **Isi Stok**.
@@ -66,7 +66,7 @@ Riwayat lengkap mulai dicatat setelah pembaruan fitur ini; data transaksi lama t
 
 ## 6. Catatan Penting
 
-- **Transaksi lama** (sebelum fitur stok aktif) **tidak** memengaruhi stok. Stok mulai dihitung dari Isi Stok pertama.
+- **Transaksi lama** (sebelum fitur stok aktif) **tidak** direkonstruksi ke ledger. Stok yang sudah tersimpan dipertahankan; hanya produk yang pertama kali diaktifkan untuk pelacakan stok yang dimulai dari 0.
 - Stok dapat minus dari **penjualan** atau pembatalan kulakan. Opname tetap hanya menerima angka minimal 0.
 - Backup otomatis menyertakan data stok dan riwayat opname — aman untuk pindah perangkat.
 

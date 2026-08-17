@@ -95,6 +95,21 @@ test('PUT stok valid → 200, stok tersimpan, ada riwayat', async () => {
   assert.equal(mutations[0].catatan, 'Opname awal');
 });
 
+test('kegagalan ledger opname rollback stok dan adjustment', async () => {
+  const { getOne, run } = require('../../db/query');
+  const beforeStock = (await getOne('SELECT stok FROM master_barang WHERE id = ?', [barangId])).stok;
+  const beforeAdjustments = (await getOne('SELECT COUNT(*) AS jumlah FROM stok_adjustment WHERE barang_id = ?', [barangId])).jumlah;
+  await run(`CREATE TRIGGER fail_opname_mutation BEFORE INSERT ON stok_mutation WHEN NEW.tipe = 'opname' BEGIN SELECT RAISE(ABORT, 'forced opname ledger failure'); END`);
+  try {
+    const result = await json(`/api/barang/${barangId}/stok`, { method: 'PUT', headers: { cookie }, body: JSON.stringify({ stok: 7, catatan: 'gagal' }) });
+    assert.equal(result.res.status, 500);
+    assert.equal((await getOne('SELECT stok FROM master_barang WHERE id = ?', [barangId])).stok, beforeStock);
+    assert.equal((await getOne('SELECT COUNT(*) AS jumlah FROM stok_adjustment WHERE barang_id = ?', [barangId])).jumlah, beforeAdjustments);
+  } finally {
+    await run('DROP TRIGGER IF EXISTS fail_opname_mutation');
+  }
+});
+
 test('PUT stok negatif ditolak', async () => {
   const { res } = await json(`/api/barang/${barangId}/stok`, {
     method: 'PUT',

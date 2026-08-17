@@ -32,6 +32,13 @@ test('riwayat stok mempertahankan item saat retry dan memulihkan label paginatio
   assert.match(js, /more\.textContent = 'Muat Lagi'/);
 });
 
+test('riwayat kosong menjelaskan titik awal ledger dan fallback ID aman', () => {
+  const js = readProjectFile('public/js/barang.js');
+  assert.match(js, /Riwayat stok mulai dicatat sejak pembaruan ini/);
+  assert.match(js, /row\.nomor_referensi \?\? \(row\.referensi_id == null \? null : String\(row\.referensi_id\)\)/);
+  assert.match(js, /Riwayat Stok/);
+});
+
 test('service worker cache dibump setelah aset stok berubah', () => {
   const sw = readProjectFile('public/sw.js');
   assert.match(sw, /kasir-mini-v18/);

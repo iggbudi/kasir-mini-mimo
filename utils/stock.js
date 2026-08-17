@@ -39,6 +39,9 @@ async function updateStockWithMutation(transaction, {
     throw new TypeError('nilai stok harus safe integer');
   }
   const delta = after - before;
+  if (!Number.isSafeInteger(delta)) {
+    throw new TypeError('perubahan stok harus safe integer');
+  }
 
   await transaction.execute({
     sql: 'UPDATE master_barang SET stok = ?, updated_at = ? WHERE id = ?',

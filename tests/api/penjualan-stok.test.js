@@ -236,6 +236,8 @@ test('kegagalan ledger membatalkan penjualan dan perubahan stok', async () => {
       SELECT RAISE(ABORT, 'forced ledger failure');
     END
   `);
+  const originalConsoleError = console.error;
+  console.error = () => {};
   try {
     const sale = await json('/api/penjualan', {
       method: 'POST',
@@ -250,6 +252,7 @@ test('kegagalan ledger membatalkan penjualan dan perubahan stok', async () => {
     const headerSesudah = (await getOne('SELECT COUNT(*) AS jumlah FROM penjualan')).jumlah;
     assert.equal(headerSesudah, headerSebelum);
   } finally {
+    console.error = originalConsoleError;
     await run('DROP TRIGGER IF EXISTS fail_stock_mutation');
   }
 });

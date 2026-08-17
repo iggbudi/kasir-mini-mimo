@@ -146,7 +146,38 @@ test('void kulakan mengurangi stok, mencatat alasan, riwayat, dan idempotensi', 
   assert.equal(after.length, 1);
 });
 
+test('kegagalan ledger kulakan rollback header dan stok', async () => {
+  const { getOne, run } = require('../../db/query');
+  const stokSebelum = await stokBarang();
+  const headerSebelum = (await getOne('SELECT COUNT(*) AS jumlah FROM kulakan')).jumlah;
+  await run(`CREATE TRIGGER fail_purchase_mutation BEFORE INSERT ON stok_mutation WHEN NEW.tipe = 'kulakan' BEGIN SELECT RAISE(ABORT, 'forced kulakan ledger failure'); END`);
+  try {
+    const result = await json('/api/kulakan', { method: 'POST', headers: { cookie }, body: JSON.stringify({ salesman_id: salesmanId, items: [{ barang_id: barangId, quantity: 1, harga_beli: 60000 }] }) });
+    assert.equal(result.res.status, 500);
+    assert.equal(await stokBarang(), stokSebelum);
+    assert.equal((await getOne('SELECT COUNT(*) AS jumlah FROM kulakan')).jumlah, headerSebelum);
+  } finally {
+    await run('DROP TRIGGER IF EXISTS fail_purchase_mutation');
+  }
+});
+
+test('kegagalan ledger pembatalan kulakan rollback void dan stok', async () => {
+  const { getOne, run } = require('../../db/query');
+  const purchase = (await json('/api/kulakan', { method: 'POST', headers: { cookie }, body: JSON.stringify({ salesman_id: salesmanId, items: [{ barang_id: barangId, quantity: 2, harga_beli: 60000 }] }) })).body.data;
+  const stokSebelum = await stokBarang();
+  await run(`CREATE TRIGGER fail_void_purchase_mutation BEFORE INSERT ON stok_mutation WHEN NEW.tipe = 'batal_kulakan' BEGIN SELECT RAISE(ABORT, 'forced void ledger failure'); END`);
+  try {
+    const result = await json(`/api/kulakan/${purchase.id}`, { method: 'DELETE', headers: { cookie }, body: JSON.stringify({ reason: 'gagal' }) });
+    assert.equal(result.res.status, 500);
+    assert.equal(await stokBarang(), stokSebelum);
+    assert.equal((await getOne('SELECT voided_at FROM kulakan WHERE id = ?', [purchase.id])).voided_at, null);
+  } finally {
+    await run('DROP TRIGGER IF EXISTS fail_void_purchase_mutation');
+  }
+});
+
 test('void kulakan setelah barang terjual → stok boleh minus', async () => {
+  const stokAwal = await stokBarang();
   const kulakan = await json('/api/kulakan', {
     method: 'POST',
     headers: { cookie },
@@ -156,7 +187,7 @@ test('void kulakan setelah barang terjual → stok boleh minus', async () => {
     })
   });
   const kulakanId = kulakan.body.data.id;
-  assert.equal(await stokBarang(), 5);
+  assert.equal(await stokBarang(), stokAwal + 5);
 
   const sale = await json('/api/penjualan', {
     method: 'POST',
@@ -167,7 +198,7 @@ test('void kulakan setelah barang terjual → stok boleh minus', async () => {
     })
   });
   assert.equal(sale.res.status, 201);
-  assert.equal(await stokBarang(), 2);
+  assert.equal(await stokBarang(), stokAwal + 2);
 
   const del = await json(`/api/kulakan/${kulakanId}`, {
     method: 'DELETE',
@@ -175,5 +206,5 @@ test('void kulakan setelah barang terjual → stok boleh minus', async () => {
     body: JSON.stringify({ reason: 'Batal setelah terjual' })
   });
   assert.equal(del.res.status, 200);
-  assert.equal(await stokBarang(), -3);
+  assert.equal(await stokBarang(), stokAwal - 3);
 });
