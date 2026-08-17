@@ -71,6 +71,23 @@ update *sampai* ke pengguna; bump memastikan aset baru *benar-benar dimuat*.
 - Commit memakai pesan yang ringkas dan jelas, diawali jenis perubahan
   (`feat:`, `fix:`, `docs:`, `chore:`).
 
+## 🐛 Alur Bugfix (WAJIB)
+
+Saat menangani bug, ikuti urutan ini:
+
+1. **Cek kondisi dulu** — reproduksi/pahami gejala, baca kode terkait,
+   identifikasi akar masalah sebelum mengubah apa pun.
+2. **Buat perencanaan** — tulis langkah perbaikan (boleh di todo list);
+   jangan langsung menebak-nebak.
+3. **Kerjakan** — implementasikan perbaikan sesuai rencana, sekecil dan
+   seterfokus mungkin.
+4. **Local test** — jalankan test yang relevan (`node --test` atau
+   `npm test`) + syntax check; pastikan tidak ada regresi.
+5. **Update docs** — perbarui dokumentasi yang terdampak (README,
+   CONTRACT, panduan, AGENTS.md) bila perilaku/kontrak berubah.
+6. **Commit dan push** — commit dengan pesan `fix: ...` lalu push ke
+   `main`.
+
 ## Konvensi Lain
 
 - Semua pesan error API dan UI dalam Bahasa Indonesia.
