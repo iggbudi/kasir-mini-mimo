@@ -41,7 +41,7 @@ test('GET /login.html melayani landing page dengan hero dan modal login', async 
 
   assert.match(html, /class="site-nav"/);
   assert.match(html, /class="hero"/);
-  assert.match(html, /Hubungi Saya untuk Instalasi/);
+  assert.match(html, /WhatsApp untuk Instalasi/);
   assert.match(html, /id="loginDialog"/);
   assert.match(html, /data-open-login/);
   assert.match(html, /id="loginForm" class="auth-form"/);
