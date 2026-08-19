@@ -122,7 +122,7 @@ app.get('/sw.js', (_req, res, next) => {
 
 app.use(express.static(publicDir, { extensions: ['html'] }));
 
-app.get('*', (req, res) => {
+app.get('/*splat', (req, res) => {
   if (!req.user) return res.redirect('/login.html');
   const indexPath = path.join(publicDir, 'index.html');
   if (fs.existsSync(indexPath)) return res.sendFile(indexPath);
