@@ -58,7 +58,9 @@ test('CSP header hadir di halaman publik dengan direktif inti', async () => {
   const res = await fetch(`${baseUrl}/login.html`, { redirect: 'manual' });
   const csp = res.headers.get('content-security-policy') || '';
   assert.match(csp, /default-src 'self'/);
-  assert.match(csp, /script-src 'self' 'unsafe-inline'/);
+  // script-src tanpa unsafe-inline — inline script sudah diekstrak ke file eksternal
+  assert.match(csp, /script-src 'self'/);
+  assert.doesNotMatch(csp, /script-src[^;]*'unsafe-inline'/);
   assert.match(csp, /font-src 'self' https:\/\/fonts\.gstatic\.com/);
   assert.match(csp, /object-src 'none'/);
   assert.match(csp, /frame-ancestors 'self'/);

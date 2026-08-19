@@ -78,11 +78,6 @@
 
   <script src="/js/app.js"></script>
   <script src="/js/pengeluaran.js"></script>
-  <script>
-    window.KasirApp.renderBottomNav('pengeluaran');
-    window.KasirApp.getSetting?.().then(r => {
-      document.getElementById('warung').textContent = r.data.nama_warung || '';
-    }).catch(() => {});
-  </script>
+  <script src="/js/page-init.js"></script>
 </body>
 </html>

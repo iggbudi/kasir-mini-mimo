@@ -58,11 +58,6 @@
 
   <script src="/js/app.js"></script>
   <script src="/js/salesman.js"></script>
-  <script>
-    window.KasirApp.renderBottomNav('');
-    window.KasirApp.getSetting?.().then(r => {
-      document.getElementById('warung').textContent = r.data.nama_warung || '';
-    }).catch(() => {});
-  </script>
+  <script src="/js/page-init.js"></script>
 </body>
 </html>

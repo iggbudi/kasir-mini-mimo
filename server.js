@@ -27,14 +27,14 @@ const publicDir = path.join(__dirname, 'public');
 // 1 membuat req.ip akurat (dipakai rate limit login).
 app.set('trust proxy', 1);
 
-// CSP parsial: blokir skrip eksternal/injection ke domain lain, plugin,
-// clickjacking, dan pengiriman form ke luar. 'unsafe-inline' tetap diizinkan
-// karena 9 halaman memakai inline <script>/onclick/style (lihat audit M3).
+// CSP: script-src tanpa unsafe-inline — semua inline <script> sudah diekstrak
+// ke file eksternal (public/js/page-init.js & home.js). style-src tetap
+// unsafe-inline karena Google Fonts + style="" atribut kecil di HTML.
 app.use(helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
-      scriptSrc: ["'self'", "'unsafe-inline'"],
+      scriptSrc: ["'self'"],
       styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
       fontSrc: ["'self'", 'https://fonts.gstatic.com'],
       imgSrc: ["'self'", 'data:'],
