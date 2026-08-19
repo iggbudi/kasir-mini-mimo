@@ -61,7 +61,7 @@ update *sampai* ke pengguna; bump memastikan aset baru *benar-benar dimuat*.
 1. Ubah aset di `public/`? → bump `CACHE_NAME` di `public/sw.js`.
 2. Test UI `tests/ui/barang-stock-management.test.js` mengecek versi cache
    (regex `kasir-mini-vNN`) — pastikan test ikut diperbarui agar lulus.
-3. Jalankan `npm test` sebelum push.
+3. Jalankan `npm run lint` dan `npm test` sebelum push — pastikan keduanya lulus.
 4. **Deploy VPS:** karena coding dan deploy di VPS yang sama, perubahan sudah
    langsung aktif untuk file `public/` (nginx menyajikan dari disk); untuk
    perubahan backend restart service: `sudo systemctl restart kasir-mini`.
