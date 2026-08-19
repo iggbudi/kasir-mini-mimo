@@ -2,9 +2,10 @@
  * Rate limiter untuk endpoint login (in-memory, per instance).
  *
  * Cukup untuk 1 instance VPS dan melindungi akun admin tunggal dari brute
- * force. State per IP disimpan di Map dan dibersihkan secara lazy: entri yang
- * sudah melewati window akan dihapus saat ada request berikutnya dari IP yang
- * sama.
+ * force. State per IP disimpan di Map dan dibersihkan secara lazy + interval:
+ * entri yang sudah melewati window akan dihapus saat ada request berikutnya
+ * atau oleh interval cleanup. Tidak persist across restart — limitasi
+ * single-instance didokumentasikan di CONTRACT (risiko rendah untuk warung kecil).
  *
  * Konfigurasi via environment (default 5 percobaan / 15 menit / lock 15 menit):
  *   LOGIN_MAX_ATTEMPTS — jumlah percobaan gagal sebelum lockout
@@ -21,6 +22,16 @@ function createLoginRateLimiter(options = {}) {
   const windowMs = options.windowMs ?? DEFAULT_WINDOW_MS;
   const lockMs = options.lockMs ?? DEFAULT_LOCK_MS;
   const state = new Map();
+
+  // Periodic cleanup agar Map tidak membengkak bila banyak IP iseng (YAGNI ringan)
+  const interval = setInterval(() => {
+    const now = Date.now();
+    for (const [ip, entry] of state) {
+      const expired = entry.lockUntil ? now > entry.lockUntil && now - entry.windowStart > windowMs : now - entry.windowStart > windowMs;
+      if (expired) state.delete(ip);
+    }
+  }, windowMs);
+  if (interval.unref) interval.unref();
 
   function reset() {
     state.clear();
