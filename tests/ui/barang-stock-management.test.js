@@ -26,9 +26,37 @@ test('script barang memakai API config, filter, opname catatan, dan riwayat', ()
   assert.match(js, /pagination\.has_more/);
 });
 
+test('frontend ter-modularisasi: format, api, ui, pwa', () => {
+  const format = readProjectFile('public/js/format.js');
+  const api = readProjectFile('public/js/api.js');
+  const ui = readProjectFile('public/js/ui.js');
+  const pwa = readProjectFile('public/js/pwa.js');
+  const app = readProjectFile('public/js/app.js');
+  assert.match(format, /formatRupiah/);
+  assert.match(api, /apiFetch/);
+  assert.match(ui, /showToast/);
+  assert.match(pwa, /registerServiceWorker/);
+  // app.js harus thin glue (<100 baris efektif)
+  const appLines = app.split('\n').filter(l => l.trim() && !l.trim().startsWith('//')).length;
+  assert.ok(appLines < 60, `app.js harus <60 baris efektif, got ${appLines}`);
+  // HTML harus load modules sebelum app.js
+  for (const html of ['public/barang.html', 'public/index.html', 'public/login.html']) {
+    const content = readProjectFile(html);
+    const idxFormat = content.indexOf('/js/format.js');
+    const idxApi = content.indexOf('/js/api.js');
+    const idxUi = content.indexOf('/js/ui.js');
+    const idxPwa = content.indexOf('/js/pwa.js');
+    const idxApp = content.indexOf('/js/app.js');
+    assert.ok(idxFormat !== -1 && idxFormat < idxApp, `${html} harus load format.js sebelum app.js`);
+    assert.ok(idxApi !== -1 && idxApi < idxApp, `${html} harus load api.js sebelum app.js`);
+    assert.ok(idxUi !== -1 && idxUi < idxApp, `${html} harus load ui.js sebelum app.js`);
+    assert.ok(idxPwa !== -1 && idxPwa < idxApp, `${html} harus load pwa.js sebelum app.js`);
+  }
+});
+
 test('service worker cache dibump setelah aset stok berubah', () => {
   const sw = readProjectFile('public/sw.js');
-  assert.match(sw, /kasir-mini-v25/);
+  assert.match(sw, /kasir-mini-v26/);
 });
 
 test('service worker memakai network-first untuk navigasi dan sw.js', () => {
@@ -47,10 +75,10 @@ test('service worker tidak meng-cache redirect navigasi (mis. /logout)', () => {
 });
 
 test('registrasi service worker memakai updateViaCache none + auto reload', () => {
-  const js = readProjectFile('public/js/app.js');
-  assert.match(js, /updateViaCache: 'none'/);
-  assert.match(js, /controllerchange/);
-  assert.match(js, /window\.location\.reload\(\)/);
+  const pwa = readProjectFile('public/js/pwa.js');
+  assert.match(pwa, /updateViaCache: 'none'/);
+  assert.match(pwa, /controllerchange/);
+  assert.match(pwa, /window\.location\.reload\(\)/);
 });
 
 test('server mengirim sw.js tanpa cache', () => {
