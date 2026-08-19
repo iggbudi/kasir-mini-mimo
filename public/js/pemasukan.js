@@ -364,7 +364,7 @@
     KasirApp.showLoading(listEl);
     try {
       const response = await KasirApp.apiFetch(`/api/penjualan?${getDateParams()}`);
-      const sales = response.data || [];
+      const sales = Array.isArray(response.data) ? response.data : (response.data.items || []);
       totalEl.textContent = KasirApp.formatRupiah(sales.reduce((sum, sale) => sum + sale.total, 0));
 
       if (sales.length === 0) {

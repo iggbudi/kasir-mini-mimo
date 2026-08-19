@@ -52,6 +52,11 @@ router.get('/', async (_req, res) => {
       stok_adjustment: stokAdjustment,
       stok_mutation: stokMutation
     };
+    const totalRows = Object.values(data).reduce((sum, arr) => sum + arr.length, 0);
+    const MAX_BACKUP_ROWS = 50000;
+    if (totalRows > MAX_BACKUP_ROWS) {
+      res.setHeader('X-Backup-Warning', `Dataset besar (${totalRows} baris) melebihi ${MAX_BACKUP_ROWS} — pertimbangkan arsip`);
+    }
     const checksum = crypto.createHash('sha256').update(JSON.stringify(data)).digest('hex');
 
     const backup = {

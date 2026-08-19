@@ -110,6 +110,21 @@ function optionalRequestId(value) {
   return value;
 }
 
+const DEFAULT_LIMIT = 20;
+const MAX_LIMIT = 100;
+
+function parseLimit(value, fieldName = 'Limit') {
+  if (value === undefined || value === '') return DEFAULT_LIMIT;
+  const limit = requirePositiveInteger(value, fieldName);
+  if (limit > MAX_LIMIT) throw new ValidationError('Limit maksimal 100');
+  return limit;
+}
+
+function parseOffset(value, fieldName = 'Offset') {
+  if (value === undefined || value === '') return 0;
+  return requireNonNegativeInteger(value, fieldName);
+}
+
 module.exports = {
   ValidationError,
   requireString,
@@ -119,5 +134,9 @@ module.exports = {
   requirePositiveId,
   requireDateRange,
   optionalString,
-  optionalRequestId
+  optionalRequestId,
+  parseLimit,
+  parseOffset,
+  DEFAULT_LIMIT,
+  MAX_LIMIT
 };

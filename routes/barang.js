@@ -9,7 +9,9 @@ const {
   optionalPositiveInteger,
   requireNonNegativeInteger,
   requirePositiveId,
-  optionalString
+  optionalString,
+  parseLimit,
+  parseOffset
 } = require('../utils/validate');
 const { getNowWib } = require('../utils/date');
 
@@ -52,21 +54,6 @@ function parseProduct(body) {
 
 function isUniqueError(err) {
   return String(err?.message || '').toLowerCase().includes('unique');
-}
-
-const DEFAULT_LIMIT = 20;
-const MAX_LIMIT = 100;
-
-function parseLimit(value) {
-  if (value === undefined || value === '') return DEFAULT_LIMIT;
-  const limit = requirePositiveInteger(value, 'Limit');
-  if (limit > MAX_LIMIT) throw new ValidationError('Limit maksimal 100');
-  return limit;
-}
-
-function parseOffset(value) {
-  if (value === undefined || value === '') return 0;
-  return requireNonNegativeInteger(value, 'Offset');
 }
 
 router.get('/', async (req, res) => {

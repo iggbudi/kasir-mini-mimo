@@ -9,7 +9,9 @@ const {
   requirePositiveId,
   requireDateRange,
   optionalString,
-  optionalRequestId
+  optionalRequestId,
+  parseLimit,
+  parseOffset
 } = require('../utils/validate');
 const { getTodayWib, getNowWib } = require('../utils/date');
 
@@ -66,17 +68,27 @@ async function getPurchase(transaction, id) {
 router.get('/', async (req, res) => {
   try {
     const range = requireDateRange(req.query.dari, req.query.sampai, getTodayWib());
-    const items = await getAll(`
-      SELECT
-        k.id, k.nomor_kulakan, k.salesman_id, k.salesman_nama,
-        k.total, k.tanggal, COUNT(i.id) AS jumlah_item
-      FROM kulakan k
-      JOIN kulakan_item i ON i.kulakan_id = k.id
+    const hasPagination = req.query.limit !== undefined || req.query.offset !== undefined;
+    if (!hasPagination) {
+      const items = await getAll(`
+        SELECT k.id, k.nomor_kulakan, k.salesman_id, k.salesman_nama, k.total, k.tanggal, COUNT(i.id) AS jumlah_item
+        FROM kulakan k JOIN kulakan_item i ON i.kulakan_id = k.id
+        WHERE k.voided_at IS NULL AND date(k.tanggal) BETWEEN :dari AND :sampai
+        GROUP BY k.id ORDER BY k.tanggal DESC, k.id DESC
+      `, { dari: range.dari, sampai: range.sampai });
+      return success(res, items);
+    }
+    const limit = parseLimit(req.query.limit);
+    const offset = parseOffset(req.query.offset);
+    const rows = await getAll(`
+      SELECT k.id, k.nomor_kulakan, k.salesman_id, k.salesman_nama, k.total, k.tanggal, COUNT(i.id) AS jumlah_item
+      FROM kulakan k JOIN kulakan_item i ON i.kulakan_id = k.id
       WHERE k.voided_at IS NULL AND date(k.tanggal) BETWEEN :dari AND :sampai
-      GROUP BY k.id
-      ORDER BY k.tanggal DESC, k.id DESC
-    `, { dari: range.dari, sampai: range.sampai });
-    return success(res, items);
+      GROUP BY k.id ORDER BY k.tanggal DESC, k.id DESC LIMIT :limit OFFSET :offset
+    `, { dari: range.dari, sampai: range.sampai, limit: limit + 1, offset });
+    const hasMore = rows.length > limit;
+    const items = hasMore ? rows.slice(0, limit) : rows;
+    return success(res, { items, pagination: { limit, offset, has_more: hasMore } });
   } catch (err) {
     if (err instanceof ValidationError) return fail(res, 400, err.message);
     console.error(err);

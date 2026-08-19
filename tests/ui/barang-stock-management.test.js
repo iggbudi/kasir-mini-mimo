@@ -28,7 +28,7 @@ test('script barang memakai API config, filter, opname catatan, dan riwayat', ()
 
 test('service worker cache dibump setelah aset stok berubah', () => {
   const sw = readProjectFile('public/sw.js');
-  assert.match(sw, /kasir-mini-v24/);
+  assert.match(sw, /kasir-mini-v25/);
 });
 
 test('service worker memakai network-first untuk navigasi dan sw.js', () => {

@@ -127,7 +127,7 @@
     KasirApp.showLoading(listEl);
     try {
       const response = await KasirApp.apiFetch(`/api/kulakan?${dateParams()}`);
-      const purchases = response.data || [];
+      const purchases = Array.isArray(response.data) ? response.data : (response.data.items || []);
       totalEl.textContent = KasirApp.formatRupiah(purchases.reduce((sum, item) => sum + item.total, 0));
       if (!purchases.length) {
         KasirApp.showEmpty(listEl, '📦', 'Belum ada kulakan untuk periode ini.');

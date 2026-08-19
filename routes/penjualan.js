@@ -9,7 +9,9 @@ const {
   requirePositiveId,
   requireDateRange,
   optionalString,
-  optionalRequestId
+  optionalRequestId,
+  parseLimit,
+  parseOffset
 } = require('../utils/validate');
 const { getTodayWib, getNowWib } = require('../utils/date');
 
@@ -69,38 +71,31 @@ async function getSale(transaction, id) {
 router.get('/', async (req, res) => {
   try {
     const range = requireDateRange(req.query.dari, req.query.sampai, getTodayWib());
-    const items = await getAll(`
-      SELECT
-        p.id,
-        p.nomor_nota,
-        p.total,
-        p.tanggal,
-        p.jenis_harga,
-        COUNT(d.id) AS jumlah_item,
-        0 AS legacy
-      FROM penjualan p
-      JOIN pemasukan d ON d.penjualan_id = p.id AND d.voided_at IS NULL
-      WHERE p.voided_at IS NULL AND date(p.tanggal) BETWEEN :dari AND :sampai
-      GROUP BY p.id
+    const hasPagination = req.query.limit !== undefined || req.query.offset !== undefined;
 
-      UNION ALL
+    if (!hasPagination) {
+      const items = await getAll(`
+        SELECT * FROM (
+          SELECT p.id, p.nomor_nota, p.total, p.tanggal, p.jenis_harga, COUNT(d.id) AS jumlah_item, 0 AS legacy FROM penjualan p JOIN pemasukan d ON d.penjualan_id = p.id AND d.voided_at IS NULL WHERE p.voided_at IS NULL AND date(p.tanggal) BETWEEN :dari AND :sampai GROUP BY p.id
+          UNION ALL
+          SELECT l.id, 'LAMA-' || l.id AS nomor_nota, l.total, l.tanggal, CASE WHEN l.jenis_harga = 'grosir' THEN 'grosir' ELSE 'retail' END AS jenis_harga, 1 AS jumlah_item, 1 AS legacy FROM pemasukan l WHERE l.penjualan_id IS NULL AND l.voided_at IS NULL AND date(l.tanggal) BETWEEN :dari AND :sampai
+        ) ORDER BY tanggal DESC, id DESC
+      `, { dari: range.dari, sampai: range.sampai });
+      return success(res, items);
+    }
 
-      SELECT
-        l.id,
-        'LAMA-' || l.id AS nomor_nota,
-        l.total,
-        l.tanggal,
-        CASE WHEN l.jenis_harga = 'grosir' THEN 'grosir' ELSE 'retail' END AS jenis_harga,
-        1 AS jumlah_item,
-        1 AS legacy
-      FROM pemasukan l
-      WHERE l.penjualan_id IS NULL
-        AND l.voided_at IS NULL
-        AND date(l.tanggal) BETWEEN :dari AND :sampai
-
-      ORDER BY tanggal DESC, id DESC
-    `, { dari: range.dari, sampai: range.sampai });
-    return success(res, items);
+    const limit = parseLimit(req.query.limit);
+    const offset = parseOffset(req.query.offset);
+    const rows = await getAll(`
+      SELECT * FROM (
+        SELECT p.id, p.nomor_nota, p.total, p.tanggal, p.jenis_harga, COUNT(d.id) AS jumlah_item, 0 AS legacy FROM penjualan p JOIN pemasukan d ON d.penjualan_id = p.id AND d.voided_at IS NULL WHERE p.voided_at IS NULL AND date(p.tanggal) BETWEEN :dari AND :sampai GROUP BY p.id
+        UNION ALL
+        SELECT l.id, 'LAMA-' || l.id AS nomor_nota, l.total, l.tanggal, CASE WHEN l.jenis_harga = 'grosir' THEN 'grosir' ELSE 'retail' END AS jenis_harga, 1 AS jumlah_item, 1 AS legacy FROM pemasukan l WHERE l.penjualan_id IS NULL AND l.voided_at IS NULL AND date(l.tanggal) BETWEEN :dari AND :sampai
+      ) ORDER BY tanggal DESC, id DESC LIMIT :limit OFFSET :offset
+    `, { dari: range.dari, sampai: range.sampai, limit: limit + 1, offset });
+    const hasMore = rows.length > limit;
+    const items = hasMore ? rows.slice(0, limit) : rows;
+    return success(res, { items, pagination: { limit, offset, has_more: hasMore } });
   } catch (err) {
     if (err instanceof ValidationError) return fail(res, 400, err.message);
     console.error(err);

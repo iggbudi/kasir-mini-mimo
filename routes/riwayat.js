@@ -1,7 +1,7 @@
 const express = require('express');
 const { getAll } = require('../db/query');
 const { success, fail } = require('../utils/response');
-const { ValidationError, requireDateRange } = require('../utils/validate');
+const { ValidationError, requireDateRange, parseLimit, parseOffset } = require('../utils/validate');
 const { getTodayWib } = require('../utils/date');
 
 const router = express.Router();
@@ -110,23 +110,20 @@ router.get('/', async (req, res) => {
       ${dateFilter.replace('tanggal', 'kb.tanggal')}
     `;
 
-    const fullSql = `
-      ${pemasukanSql}
-      UNION ALL
-      ${penjualanSql}
-      UNION ALL
-      ${pengeluaranSql}
-      UNION ALL
-      ${kasbonSql}
-      UNION ALL
-      ${kulakanSql}
-      UNION ALL
-      ${bayarSql}
-      ORDER BY tanggal DESC, tipe ASC, id DESC
-    `;
-
-    const items = await getAll(fullSql, params);
-    return success(res, { items });
+    const hasPagination = req.query.limit !== undefined || req.query.offset !== undefined;
+    if (!hasPagination) {
+      const fullSql = ` ${pemasukanSql} UNION ALL ${penjualanSql} UNION ALL ${pengeluaranSql} UNION ALL ${kasbonSql} UNION ALL ${kulakanSql} UNION ALL ${bayarSql} ORDER BY tanggal DESC, tipe ASC, id DESC`;
+      const items = await getAll(fullSql, params);
+      return success(res, { items });
+    }
+    const limit = parseLimit(req.query.limit);
+    const offset = parseOffset(req.query.offset);
+    const paginatedSql = `SELECT * FROM ( ${pemasukanSql} UNION ALL ${penjualanSql} UNION ALL ${pengeluaranSql} UNION ALL ${kasbonSql} UNION ALL ${kulakanSql} UNION ALL ${bayarSql} ) ORDER BY tanggal DESC, tipe ASC, id DESC LIMIT :limit OFFSET :offset`;
+    const paginatedParams = { ...params, limit: limit + 1, offset };
+    const rows = await getAll(paginatedSql, paginatedParams);
+    const hasMore = rows.length > limit;
+    const items = hasMore ? rows.slice(0, limit) : rows;
+    return success(res, { items, pagination: { limit, offset, has_more: hasMore } });
   } catch (err) {
     if (err instanceof ValidationError) return fail(res, 400, err.message);
     console.error(err);
