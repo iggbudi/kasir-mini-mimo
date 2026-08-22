@@ -56,7 +56,10 @@
       <div class="stock-filter">
         <div class="stock-filter__search">
           <label for="search">Cari Barang</label>
-          <input id="search" type="search" placeholder="Ketik nama barang">
+          <div class="search-combobox" style="position:relative">
+            <input id="search" type="search" placeholder="Ketik nama barang" autocomplete="off">
+            <div id="searchSuggestions" class="product-options hidden" role="listbox" aria-label="Saran nama barang"></div>
+          </div>
         </div>
         <div class="stock-filter__status">
           <label for="status">Status</label>

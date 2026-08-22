@@ -13,7 +13,10 @@
   const kondisiStokInput = document.getElementById('kondisiStok');
   const stokMinimumInput = document.getElementById('stokMinimum');
   const btnSaveStokMinimum = document.getElementById('btnSaveStokMinimum');
+  const searchSuggestionsEl = document.getElementById('searchSuggestions');
+  const searchComboboxEl = searchSuggestionsEl ? searchSuggestionsEl.parentElement : null;
   let items = [];
+  let allBarang = [];
   let searchTimer = null;
   let activeStokMinimum = 5;
 
@@ -31,6 +34,64 @@
     batal_kulakan: 'Batal Kulakan',
     opname: 'Opname'
   };
+
+  function hideSearchSuggestions() {
+    if (searchSuggestionsEl) searchSuggestionsEl.classList.add('hidden');
+  }
+
+  function normalizeSearch(value) {
+    return String(value || '').trim().replace(/\s+/g, ' ').toLocaleLowerCase('id-ID');
+  }
+
+  async function fetchAllBarang() {
+    try {
+      const response = await KasirApp.apiFetch('/api/barang?status=semua');
+      const data = response.data || [];
+      // API tanpa pagination mengembalikan array langsung
+      allBarang = Array.isArray(data) ? data : (data.items || []);
+    } catch (_err) {
+      allBarang = [];
+    }
+  }
+
+  function getFilteredSuggestions(query) {
+    const q = normalizeSearch(query);
+    if (!q) return allBarang.slice(0, 30);
+    return allBarang.filter(item => normalizeSearch(item.nama).includes(q)).slice(0, 30);
+  }
+
+  function renderSearchSuggestions() {
+    if (!searchSuggestionsEl) return;
+    const query = searchInput.value;
+    const suggestions = getFilteredSuggestions(query);
+    if (suggestions.length === 0) {
+      if (!query.trim() && allBarang.length === 0) {
+        searchSuggestionsEl.innerHTML = '<p class="product-options__status">Belum ada barang</p>';
+      } else {
+        searchSuggestionsEl.innerHTML = '<p class="product-options__status">Tidak ada barang cocok</p>';
+      }
+      searchSuggestionsEl.classList.remove('hidden');
+      return;
+    }
+    const header = !normalizeSearch(query) && allBarang.length > 0
+      ? '<p class="product-options__status" style="text-align:left;font-weight:600">Semua barang — ' + allBarang.length + ' item</p>'
+      : '';
+    searchSuggestionsEl.innerHTML = header + suggestions.map(item => {
+      const badge = item.aktif ? '' : ' <span class="badge" style="font-size:10px">Arsip</span>';
+      return '<button type="button" class="product-option" data-suggest="' + KasirApp.escapeHtml(item.nama) + '" role="option">' +
+        '<span class="product-option__name">' + KasirApp.escapeHtml(item.nama) + badge + '</span>' +
+        '<span class="product-option__price">' + KasirApp.escapeHtml(KasirApp.formatRupiah(item.harga_retail)) + '</span>' +
+        '</button>';
+    }).join('');
+    searchSuggestionsEl.querySelectorAll('[data-suggest]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        searchInput.value = btn.dataset.suggest;
+        hideSearchSuggestions();
+        loadData();
+      });
+    });
+    searchSuggestionsEl.classList.remove('hidden');
+  }
 
   function resetForm() {
     form.reset();
@@ -329,6 +390,10 @@
     }
   }
 
+  async function refreshAllBarangSilently() {
+    await fetchAllBarang();
+  }
+
   async function loadData() {
     KasirApp.showLoading(listEl);
     const params = new URLSearchParams({ status: statusInput.value });
@@ -342,6 +407,12 @@
       const response = await KasirApp.apiFetch(`/api/barang?${params}`);
       items = response.data || [];
       renderList();
+      // Segarkan daftar saran dropdown di background tanpa blokir render list
+      refreshAllBarangSilently().then(() => {
+        if (searchSuggestionsEl && !searchSuggestionsEl.classList.contains('hidden')) {
+          renderSearchSuggestions();
+        }
+      });
     } catch (err) {
       KasirApp.showError(listEl, err.message || 'Gagal memuat master barang');
     }
@@ -382,7 +453,20 @@
   kondisiStokInput.addEventListener('change', loadData);
   searchInput.addEventListener('input', () => {
     clearTimeout(searchTimer);
+    renderSearchSuggestions();
     searchTimer = setTimeout(loadData, 250);
+  });
+  if (searchInput) {
+    searchInput.addEventListener('focus', () => {
+      renderSearchSuggestions();
+    });
+    searchInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') hideSearchSuggestions();
+    });
+  }
+  document.addEventListener('click', (e) => {
+    if (!searchComboboxEl) return;
+    if (!searchComboboxEl.contains(e.target)) hideSearchSuggestions();
   });
 
   btnSaveStokMinimum.addEventListener('click', async () => {
@@ -409,5 +493,8 @@
   });
 
   loadStockConfig();
+  fetchAllBarang().then(() => {
+    if (document.activeElement === searchInput) renderSearchSuggestions();
+  });
   loadData();
 })();
