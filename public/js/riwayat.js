@@ -3,15 +3,21 @@
 
   const listEl = document.getElementById('list');
   const filterForm = document.getElementById('filterForm');
+  const tipeInput = document.getElementById('tipe');
 
-  async function loadData(dari = '', sampai = '') {
+  async function loadData(dari = '', sampai = '', tipe = 'semua') {
     listEl.innerHTML = '';
     window.KasirApp.showLoading(listEl);
 
-    let url = '/api/riwayat';
+    const params = new URLSearchParams();
     if (dari && sampai) {
-      url += `?dari=${dari}&sampai=${sampai}`;
+      params.set('dari', dari);
+      params.set('sampai', sampai);
     }
+    if (tipe && tipe !== 'semua') params.set('tipe', tipe);
+    let url = '/api/riwayat';
+    const qs = params.toString();
+    if (qs) url += `?${qs}`;
 
     try {
       const res = await window.KasirApp.apiFetch(url);
@@ -61,12 +67,26 @@
     e.preventDefault();
     const dari = document.getElementById('dari').value;
     const sampai = document.getElementById('sampai').value;
-    loadData(dari, sampai);
+    const tipe = tipeInput ? tipeInput.value : 'semua';
+    loadData(dari, sampai, tipe);
   });
+
+  if (tipeInput) {
+    tipeInput.addEventListener('change', () => {
+      const dari = document.getElementById('dari').value;
+      const sampai = document.getElementById('sampai').value;
+      loadData(dari, sampai, tipeInput.value);
+    });
+  }
+
+  // support ?tipe= di URL (mis. dari laporan.html)
+  const urlParams = new URLSearchParams(window.location.search);
+  const initialTipe = urlParams.get('tipe') || 'semua';
+  if (tipeInput && urlParams.get('tipe')) tipeInput.value = initialTipe;
 
   // default load hari ini
   const today = window.KasirApp.getTodayStr();
-  document.getElementById('dari').value = today;
-  document.getElementById('sampai').value = today;
-  loadData(today, today);
+  document.getElementById('dari').value = urlParams.get('dari') || today;
+  document.getElementById('sampai').value = urlParams.get('sampai') || today;
+  loadData(document.getElementById('dari').value, document.getElementById('sampai').value, initialTipe);
 })();

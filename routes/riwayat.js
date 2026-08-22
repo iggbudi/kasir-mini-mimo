@@ -6,9 +6,13 @@ const { getTodayWib } = require('../utils/date');
 
 const router = express.Router();
 
+const VALID_TIPE = new Set(['semua', 'pemasukan', 'penjualan', 'pengeluaran', 'kasbon', 'kulakan', 'kasbon_bayar']);
+
 router.get('/', async (req, res) => {
   try {
     const range = requireDateRange(req.query.dari, req.query.sampai, getTodayWib());
+    const tipe = req.query.tipe === undefined || req.query.tipe === '' ? 'semua' : String(req.query.tipe);
+    if (!VALID_TIPE.has(tipe)) throw new ValidationError('Tipe riwayat tidak valid');
     const dateFilter = 'WHERE date(tanggal) BETWEEN :dari AND :sampai';
     const params = { dari: range.dari, sampai: range.sampai };
 
@@ -96,7 +100,7 @@ router.get('/', async (req, res) => {
     const bayarSql = `
       SELECT
         'kasbon_bayar' as tipe,
-        kb.id,
+        kb.id as id,
         'Pembayaran: ' || COALESCE(k.nama, '') as label,
         kb.bayar as nominal,
         'masuk' as arah,
@@ -104,21 +108,33 @@ router.get('/', async (req, res) => {
         CASE WHEN kb.voided_at IS NULL THEN 0 ELSE 1 END as dibatalkan,
         kb.voided_at,
         kb.void_reason,
-        kb.tanggal
+        kb.tanggal as tanggal
       FROM kasbon_bayar kb
       LEFT JOIN kasbon k ON k.id = kb.kasbon_id
       ${dateFilter.replace('tanggal', 'kb.tanggal')}
     `;
 
+    const sqlByTipe = {
+      pemasukan: pemasukanSql,
+      penjualan: penjualanSql,
+      pengeluaran: pengeluaranSql,
+      kasbon: kasbonSql,
+      kulakan: kulakanSql,
+      kasbon_bayar: bayarSql
+    };
+    const unionSql = tipe === 'semua'
+      ? `${pemasukanSql} UNION ALL ${penjualanSql} UNION ALL ${pengeluaranSql} UNION ALL ${kasbonSql} UNION ALL ${kulakanSql} UNION ALL ${bayarSql}`
+      : sqlByTipe[tipe];
+
     const hasPagination = req.query.limit !== undefined || req.query.offset !== undefined;
     if (!hasPagination) {
-      const fullSql = ` ${pemasukanSql} UNION ALL ${penjualanSql} UNION ALL ${pengeluaranSql} UNION ALL ${kasbonSql} UNION ALL ${kulakanSql} UNION ALL ${bayarSql} ORDER BY tanggal DESC, tipe ASC, id DESC`;
+      const fullSql = ` ${unionSql} ORDER BY tanggal DESC, tipe ASC, id DESC`;
       const items = await getAll(fullSql, params);
       return success(res, { items });
     }
     const limit = parseLimit(req.query.limit);
     const offset = parseOffset(req.query.offset);
-    const paginatedSql = `SELECT * FROM ( ${pemasukanSql} UNION ALL ${penjualanSql} UNION ALL ${pengeluaranSql} UNION ALL ${kasbonSql} UNION ALL ${kulakanSql} UNION ALL ${bayarSql} ) ORDER BY tanggal DESC, tipe ASC, id DESC LIMIT :limit OFFSET :offset`;
+    const paginatedSql = `SELECT * FROM ( ${unionSql} ) ORDER BY tanggal DESC, tipe ASC, id DESC LIMIT :limit OFFSET :offset`;
     const paginatedParams = { ...params, limit: limit + 1, offset };
     const rows = await getAll(paginatedSql, paginatedParams);
     const hasMore = rows.length > limit;
