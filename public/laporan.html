@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f6f1e6">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800;900&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+  <title>Laporan Harian — Kasir Mini</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="manifest" href="/manifest.json">
+</head>
+<body>
+  <main class="container">
+    <div class="page-header">
+      <a href="/" class="back-link">← Beranda</a>
+      <span class="muted small" id="warung"></span>
+    </div>
+
+    <h1 class="title">Laporan Harian</h1>
+    <p class="muted small">Pendapatan (Penjualan + Bayar Kasbon) vs Pengeluaran (Operasional + Kulakan) — dipisah tapi tampil total.</p>
+
+    <section class="card mt-3">
+      <form id="filterForm" class="filter-bar" style="align-items:end; gap:8px;">
+        <div>
+          <label for="dari">Dari</label>
+          <input type="date" id="dari" required style="min-height:42px;">
+        </div>
+        <div>
+          <label for="sampai">Sampai</label>
+          <input type="date" id="sampai" required style="min-height:42px;">
+        </div>
+        <div style="align-self:flex-end; display:flex; gap:6px;">
+          <button type="submit" class="primary" style="width:auto; padding:0 16px; min-height:42px;">Tampilkan</button>
+          <button type="button" class="secondary" id="btnPrint" style="width:auto; padding:0 12px; min-height:42px;">Cetak</button>
+        </div>
+      </form>
+      <div class="filter-bar mt-2" style="margin-top:8px;">
+        <button type="button" class="btn-filter" data-range="today">Hari ini</button>
+        <button type="button" class="btn-filter active" data-range="7">7 Hari</button>
+        <button type="button" class="btn-filter" data-range="30">30 Hari</button>
+      </div>
+    </section>
+
+    <section class="card mt-3">
+      <div id="summary" class="summary summary-neutral hidden" style="margin-top:0;">
+        <div class="summary-content">
+          <div class="summary-label">Ringkasan <span id="summaryRange"></span></div>
+          <div class="summary-value" id="summarySisa">-</div>
+          <div class="summary-extra" id="summaryDetail">-</div>
+        </div>
+      </div>
+
+      <div id="list" class="mt-3"></div>
+    </section>
+  </main>
+
+  <script src="/js/format.js"></script>
+  <script src="/js/api.js"></script>
+  <script src="/js/ui.js"></script>
+  <script src="/js/pwa.js"></script>
+  <script src="/js/app.js"></script>
+  <script src="/js/laporan.js"></script>
+  <script src="/js/page-init.js"></script>
+</body>
+</html>

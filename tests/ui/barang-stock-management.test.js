@@ -56,7 +56,7 @@ test('frontend ter-modularisasi: format, api, ui, pwa', () => {
 
 test('service worker cache dibump setelah aset stok berubah', () => {
   const sw = readProjectFile('public/sw.js');
-  assert.match(sw, /kasir-mini-v27/);
+  assert.match(sw, /kasir-mini-v28/);
 });
 
 test('service worker memakai network-first untuk navigasi dan sw.js', () => {

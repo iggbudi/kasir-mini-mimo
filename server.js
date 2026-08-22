@@ -15,6 +15,7 @@ const pengeluaranRoutes = require('./routes/pengeluaran');
 const kasbonRoutes = require('./routes/kasbon');
 const ringkasanRoutes = require('./routes/ringkasan');
 const riwayatRoutes = require('./routes/riwayat');
+const laporanRoutes = require('./routes/laporan');
 const backupRoutes = require('./routes/backup');
 const { fail } = require('./utils/response');
 const { requireAuth, attachUser } = require('./middleware/auth');
@@ -84,6 +85,7 @@ app.use('/api/pengeluaran', requireAuth, pengeluaranRoutes);
 app.use('/api/kasbon', requireAuth, kasbonRoutes);
 app.use('/api/ringkasan', requireAuth, ringkasanRoutes);
 app.use('/api/riwayat', requireAuth, riwayatRoutes);
+app.use('/api/laporan', requireAuth, laporanRoutes);
 app.use('/api/backup', requireAuth, backupRoutes);
 
 // Catch-all untuk endpoint /api yang belum ada

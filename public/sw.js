@@ -1,4 +1,4 @@
-const CACHE_NAME = 'kasir-mini-v27';
+const CACHE_NAME = 'kasir-mini-v28';
 const ASSETS = [
   '/',
   '/index.html',
@@ -10,6 +10,7 @@ const ASSETS = [
   '/barang.html',
   '/salesman.html',
   '/kulakan.html',
+  '/laporan.html',
   '/login.html',
   '/css/style.css',
   '/css/login.css',
@@ -27,6 +28,7 @@ const ASSETS = [
   '/js/barang.js',
   '/js/salesman.js',
   '/js/kulakan.js',
+  '/js/laporan.js',
   '/js/page-init.js',
   '/js/home.js',
   '/manifest.json'
